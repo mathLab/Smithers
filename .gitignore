@@ -1,0 +1,10 @@
+# mac file systems
+.DS_Store
+
+# compiled python codes
+*.pyc
+pydmd\.egg-info/
+
+.idea/*
+
+tutorials/\.ipynb_checkpoints/
