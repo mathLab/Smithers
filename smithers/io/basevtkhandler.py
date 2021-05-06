@@ -39,8 +39,8 @@ class BaseVTKHandler(ABC):
         """
         result = {}
         for i in range(vtkdata.GetCellData().GetNumberOfArrays()):
-            array = cls._vtk_to_numpy_(vtkdata.GetPointData().GetArray(i))
-            name = vtkdata.GetPointData().GetArrayName(i)
+            array = cls._vtk_to_numpy_(vtkdata.GetCellData().GetArray(i))
+            name = vtkdata.GetCellData().GetArrayName(i)
             result[name] = array
         return result
 

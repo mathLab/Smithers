@@ -5,12 +5,14 @@ class VTKHandler(BaseVTKHandler):
     Handler for .VTK files.
     """
     from vtk import vtkPolyDataReader, vtkPolyDataWriter
-    from vtk import vtkPolyData
+    from vtk import vtkUnstructuredGridReader, vtkUnstructuredGridWriter
+    from vtk import vtkPolyData, vtkUnstructuredGrid
 
     _data_type_ = vtkPolyData
+    _data_type_ = vtkUnstructuredGrid
 
-    _reader_ = vtkPolyDataReader
-    _writer_ = vtkPolyDataWriter
+    _reader_ = vtkUnstructuredGridReader
+    _writer_ = vtkUnstructuredGridWriter
 
     @classmethod
     def read(cls, filename):
