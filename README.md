@@ -17,7 +17,7 @@ All the other dependencies of **Smithers** are imported *at runtime*.
 ### Installing from source
 The official distribution is on GitHub, and you can clone the repository using
 ```bash
-> git clone https://github.com/mathLab/PyDMD
+> git clone https://github.com/mathLab/Smithers
 ```
 
 To install the package just type:
