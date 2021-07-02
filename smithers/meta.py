@@ -11,7 +11,7 @@ __all__ = [
 
 __project__ = 'Smithers'
 __title__ = "smithers"
-__author__ = "Nicola Demo"
+__author__ = "Nicola Demo, Francesco Andreuzzi"
 __copyright__ = "Copyright 2021-2021, Smithers contributors"
 __license__ = "MIT"
 __version__ = "0.0.1"
