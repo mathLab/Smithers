@@ -21,3 +21,8 @@ class TestStlHandler(TestCase):
     def test_cells(self):
         data = STLHandler.read(stl_file)
         np.testing.assert_equal(data['cells'][5], [6, 1, 4])
+
+    def test_write(self):
+        data = STLHandler.read(stl_file)
+        data['points'] += 1.0
+        STLHandler.write('test.stl', data)

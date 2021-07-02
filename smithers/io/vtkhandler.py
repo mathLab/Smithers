@@ -9,7 +9,6 @@ class VTKHandler(BaseVTKHandler):
     from vtk import vtkPolyData, vtkUnstructuredGrid
 
     _data_type_ = vtkPolyData
-    _data_type_ = vtkUnstructuredGrid
 
     _reader_ = vtkUnstructuredGridReader
     _writer_ = vtkUnstructuredGridWriter
@@ -40,6 +39,10 @@ class VTKHandler(BaseVTKHandler):
     @classmethod
     def write(cls, filename, data):
         """ TODO """
+
+        from vtk import vtkPolyData, vtkPoints, vtkCellArray
+        from vtk.util.numpy_support import numpy_to_vtk
+
         polydata = vtkPolyData()
 
         vtk_points = vtkPoints()

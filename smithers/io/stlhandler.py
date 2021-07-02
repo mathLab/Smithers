@@ -36,6 +36,10 @@ class STLHandler(BaseVTKHandler):
     @classmethod
     def write(cls, filename, data):
         """ TODO """
+
+        from vtk import vtkPoints, vtkCellArray
+        from vtk.util.numpy_support import numpy_to_vtk
+
         polydata = cls._data_type_()
 
         vtk_points = vtkPoints()
@@ -52,5 +56,3 @@ class STLHandler(BaseVTKHandler):
         writer.SetFileName(filename)
         writer.SetInputData(polydata)
         writer.Write()
-
-
