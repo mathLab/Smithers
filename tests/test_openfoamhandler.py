@@ -37,13 +37,8 @@ class TestOpenFoamHandler(TestCase):
         smithers_cell = mesh['0']['cells'][a_key]
 
         np.testing.assert_almost_equal(
-            smithers_cell['faces_indexes'],
-            truth_mesh.cell_faces[a_key])
-
-        np.testing.assert_almost_equal(
             smithers_cell['faces'],
-            [truth_mesh.faces[face_idx]
-                for face_idx in truth_mesh.cell_faces[a_key]])
+            truth_mesh.cell_faces[a_key])
 
     def test_read_cell_neighbors(self):
         a_key = list(mesh['0']['cells'].keys())[-1]
@@ -72,7 +67,7 @@ class TestOpenFoamHandler(TestCase):
         ofpp_obstacle_faces = truth_mesh.faces[
             ofpp_obstacle.start:ofpp_obstacle.start + ofpp_obstacle.num]
 
-        np.testing.assert_almost_equal(smithers_obstacle['faces'],
+        np.testing.assert_almost_equal(mesh['0']['faces'][smithers_obstacle['faces']],
             ofpp_obstacle_faces)
 
         points_indexes = np.concatenate([face_points_idx for face_points_idx in ofpp_obstacle_faces])
@@ -82,6 +77,7 @@ class TestOpenFoamHandler(TestCase):
         np.testing.assert_almost_equal(mesh['0']['points'][smithers_obstacle['points']], all_points)
 
         assert smithers_obstacle['points'].ndim == 1
+        assert smithers_obstacle['faces'].ndim == 1
 
     def test_read_fields_time_instants_all(self):
         all_numeric_mesh = handler.read(openfoam_mesh_path, fields_time_instants='all_numeric')

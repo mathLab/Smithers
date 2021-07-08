@@ -15,11 +15,13 @@ class OpenFoamHandler:
         data = mesh.boundary[key]
 
         # extract faces which compose the boundary
-        bd_faces = np.array(mesh.faces[data.start : data.start + data.num])
-        # extract a list of unique points which compose the boundary
-        bd_points = np.unique(np.concatenate(bd_faces))
+        bd_faces_indexes = np.array(list(range(data.start, data.start + data.num)))
+        bd_faces = np.concatenate([mesh.faces[idx] for idx in bd_faces_indexes])
 
-        return {"faces": bd_faces, "points": bd_points, "type": data.type}
+        # extract a list of unique points which compose the boundary
+        bd_points = np.unique(bd_faces)
+
+        return {"faces": bd_faces_indexes, "points": bd_points, "type": data.type}
 
     @classmethod
     def _build_cells(cls, mesh, cell_idx):
@@ -29,8 +31,7 @@ class OpenFoamHandler:
         cell_points = np.unique(np.concatenate(cell_faces))
 
         return {
-            "faces_indexes": mesh.cell_faces[cell_idx],
-            "faces": cell_faces,
+            "faces": cell_faces_idxes,
             "points": cell_points,
             "neighbours": mesh.cell_neighbour[cell_idx],
         }
