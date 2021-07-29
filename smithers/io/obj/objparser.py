@@ -95,7 +95,8 @@ def save_obj(obj: WavefrontOBJ, path: str):
 
         for poly_idx, polygon in enumerate(obj.polygons):
             if (
-                poly_idx
+                len(obj.regions_change_indexes) > current_region_idx + 1
+                and poly_idx
                 == obj.regions_change_indexes[current_region_idx + 1][0]
             ):
                 # the region changes NOW
