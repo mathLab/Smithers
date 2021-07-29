@@ -1,7 +1,7 @@
-# The source code in this file is baded on
+# The source code in this file is based on
 # http://jamesgregson.ca/loadsave-wavefront-obj-files-in-python.html
 # I removed several features which were not needed, cleaned the code, and
-# introduced the management of multiple regions of the .obj file
+# introduced the management of multiple regions in a single .obj file
 
 import numpy as np
 
