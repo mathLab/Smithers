@@ -31,6 +31,8 @@ def load_obj(filename: str) -> WavefrontOBJ:
 
         for line in objf:
             toks = line.split()
+            if len(toks) == 0:
+                continue
 
             # header
             if toks[0] == "#" and len(toks) == 3 and toks[1].isnumeric():
