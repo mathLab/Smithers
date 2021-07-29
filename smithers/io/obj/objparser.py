@@ -35,7 +35,7 @@ def load_obj(filename: str) -> WavefrontOBJ:
                 continue
 
             # header
-            if toks[0] == "#" and len(toks) == 3 and toks[1].isnumeric():
+            if toks[0] == "#" and len(toks) >= 3 and toks[1].isnumeric():
                 obj.regions.append(toks[2])
             elif toks[0] == "v":
                 obj.vertices.append([float(v) for v in toks[1:]])
