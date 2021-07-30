@@ -1,5 +1,6 @@
 from .objparser import load_obj, save_obj, WavefrontOBJ
 import numpy as np
+from scipy.spatial.transform import Rotation
 
 
 class ObjHandler:
@@ -32,6 +33,24 @@ class ObjHandler:
         :type scale: list
         """
         data.vertices = data.vertices * scale
+
+    @classmethod
+    def rotate_around_axis(cls, data, axis, radians):
+        """Scale the position of the vertices in the given `data` variable
+        using the given scaling vector.
+
+        :param data: The OBJ data.
+        :type data: WavefrontOBJ
+        :param scale: A 1D vector which contains the scaling factors for each
+            component, defaults to [1,1,1]
+        :type scale: list
+        """
+        axis = np.array(axis) / np.linalg.norm(axis)
+        axis *= radians
+
+        data.vertices = Rotation.from_rotvec(axis).apply(
+            data.vertices
+        )
 
     @classmethod
     def dimension(cls, data):
