@@ -1,0 +1,15 @@
+# Wavefront OBJ file
+# Regions:
+#     0    inner
+#     1    outer
+#
+# points    : 3
+# triangles : 2
+#
+v 0.109625 0.06 -0.0488084
+v 0.0488084 0.06 -0.109625
+v 0.0488084 0.06 -0.2
+g inner
+f 0 1 2
+g outer
+f 2 1 0
