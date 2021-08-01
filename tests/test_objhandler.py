@@ -10,7 +10,7 @@ from smithers.io.obj.objparser import save_obj, WavefrontOBJ
 data = ObjHandler.read("tests/test_datasets/file.obj")
 
 
-class TestStlHandler(TestCase):
+class TestObjHandler(TestCase):
     def test_vertices(self):
         expected = [
             [0.109625, 0.06, -0.0488084],
@@ -43,6 +43,51 @@ class TestStlHandler(TestCase):
 
         save_obj(x, "/var/tmp/data.obj")
         assert cmp("/var/tmp/data.obj", "tests/test_datasets/file.obj")
+
+    def test_boundary(self):
+        x = WavefrontOBJ()
+        x.vertices = np.array(
+            [
+                [0.109625, 0.06, -0.0488084],
+                [0.0488084, 0.06, -0.109625],
+                [0.0488084, 0.06, -0.2],
+            ]
+        )
+        x.polygons = [[0, 1, 2], [2, 1, 0]]
+
+        exp = np.array([[0.0488084, 0.06, -0.2], [0.109625, 0.06, -0.0488084]])
+
+        np.testing.assert_almost_equal(
+            ObjHandler.boundary(x, axis=None), exp, decimal=15
+        )
+
+        np.testing.assert_almost_equal(
+            ObjHandler.boundary(x, axis=2), exp[:,2], decimal=15
+        )
+
+    def test_translate(self):
+        x = WavefrontOBJ()
+        x.vertices = np.array(
+            [
+                [0.109625, 0.06, -0.0488084],
+                [0.0488084, 0.06, -0.109625],
+                [0.0488084, 0.06, -0.2],
+            ]
+        )
+        x.polygons = [[0, 1, 2], [2, 1, 0]]
+
+        ObjHandler.translate(x, [1, 0, -1])
+
+        assert x.polygons == [[0, 1, 2], [2, 1, 0]]
+
+        expected = np.array(
+            [
+                [1.109625, 0.06, -1.0488084],
+                [1.0488084, 0.06, -1.109625],
+                [1.0488084, 0.06, -1.2],
+            ]
+        )
+        np.testing.assert_almost_equal(x.vertices, expected, decimal=15)
 
     def test_rotate(self):
         x = WavefrontOBJ()
@@ -129,6 +174,8 @@ class TestStlHandler(TestCase):
         x.vertices = np.array(tmp)
         x.polygons = [[0, 1, 2], [2, 1, 0]]
 
-        ObjHandler.switch_axes(x, 1,2)
+        ObjHandler.switch_axes(x, 1, 2)
 
-        np.testing.assert_almost_equal(x.vertices,tmp[:,[0,2,1]], decimal=15)
+        np.testing.assert_almost_equal(
+            x.vertices, tmp[:, [0, 2, 1]], decimal=15
+        )

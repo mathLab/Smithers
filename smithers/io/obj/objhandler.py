@@ -22,6 +22,20 @@ class ObjHandler:
         return load_obj(filename)
 
     @classmethod
+    def boundary(cls, data, axis=None):
+        bd = np.concatenate(
+            [
+                np.min(data.vertices, axis=0)[None, :],
+                np.max(data.vertices, axis=0)[None, :],
+            ],
+            axis=0,
+        )
+        if axis is None:
+            return bd
+        else:
+            return bd[:, axis]
+
+    @classmethod
     def scale(cls, data, scale=[1, 1, 1]):
         """Scale the position of the vertices in the given `data` variable
         using the given scaling vector.
@@ -33,6 +47,19 @@ class ObjHandler:
         :type scale: list
         """
         data.vertices = data.vertices * scale
+
+    @classmethod
+    def translate(cls, data, translation=[0, 0, 0]):
+        """Move the object summing a 1D vector of X,Y,Z coordinates to its
+        points.
+
+        :param data: The OBJ data.
+        :type data: WavefrontOBJ
+        :param translation: A 1D vector which contains the value of the
+            translation on X,Y,Z. Defaults to [0,0,0]
+        :type translation: list, optional
+        """
+        data.vertices += translation
 
     @classmethod
     def rotate_around_axis(cls, data, axis, radians):
@@ -56,9 +83,7 @@ class ObjHandler:
         axis = np.array(axis) / np.linalg.norm(axis)
         axis *= radians
 
-        data.vertices = Rotation.from_rotvec(axis).apply(
-            data.vertices
-        )
+        data.vertices = Rotation.from_rotvec(axis).apply(data.vertices)
 
     @classmethod
     def switch_axes(cls, data, idx0, idx1):
@@ -78,9 +103,9 @@ class ObjHandler:
         :type scale: int
         """
 
-        temp = np.array(data.vertices[:,idx0])
-        data.vertices[:,idx0] = np.array(data.vertices[:,idx1])
-        data.vertices[:,idx1] = temp
+        temp = np.array(data.vertices[:, idx0])
+        data.vertices[:, idx0] = np.array(data.vertices[:, idx1])
+        data.vertices[:, idx1] = temp
 
     @classmethod
     def dimension(cls, data):
