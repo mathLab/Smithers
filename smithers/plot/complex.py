@@ -62,7 +62,6 @@ def plot(
         narrow_view=False,
         dpi=None,
         filename=None,
-        legend_label=None
     ):
         """
         Plot complex numbers (for instance, eigenvalues).
@@ -80,6 +79,12 @@ def plot(
         :param int dpi: If not None, the given value is passed to
             ``plt.figure`` in order to specify the DPI of the resulting figure.
         :param str filename: If specified, the plot is saved at `filename`.
+
+        Example:
+
+        >>> import numpy as np; from smithers.plot import plot_complex
+        >>> complex_numbers = np.random.rand(10) + np.random.rand(10) * 1j
+        >>> plot_complex(complex_numbers, title="Random complex numbers", narrow_view=True)
         """
         if dpi is not None:
             plt.figure(figsize=figsize, dpi=dpi)

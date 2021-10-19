@@ -1,1 +1,1 @@
-from .plot_complex import plot as plot_complex
+from .complex import plot as plot_complex
