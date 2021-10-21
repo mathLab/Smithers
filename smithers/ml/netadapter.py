@@ -6,11 +6,12 @@ training and testing phases.
 import torch
 import torch.nn as nn
 
-from ml import RedNet, FNN
-from ml.utils import PossibleCutIdx, spatial_gradients, give_inputs, matrixize
+from smithers.ml.rednet import RedNet
+from smithers.ml.fnn import FNN, training_fnn
+from smithers.ml.utils import PossibleCutIdx, spatial_gradients, give_inputs, matrixize
 from ATHENA.athena.active import ActiveSubspaces
-from ml.asmodel import get_ASModel_FD, ASModel, compute_Z_AS_space
-from ml import PCEModel
+from smithers.ml.asmodel import get_ASModel_FD, ASModel, compute_Z_AS_space
+from smithers.ml.pcemodel import PCEModel
 
 if torch.cuda.is_available():
     device = torch.device('cuda')
@@ -23,20 +24,20 @@ class NetAdapter():
     of the training and testing phases.
     '''
     def __init__(self, cutoff_idx, red_dim, red_method, inout_method):
-    '''    
-    :param int cutoff_idx: value that identifies the cut-off layer
-    :param int red_dim: dimension of the reduced space onto which we
-        project the high-dimensional vectors
-    :param str red_method: string that identifies the reduced method to 
-        use, e.g. 'AS', 'POD'
-    :param str inout_method: string the represents the technique to use for
-        the identification of the input-output map, e.g. 'PCE', 'ANN'
-    '''
-    
-    self.cutoff_idx = cutoff_idx
-    self.red_dim = red_dim
-    self.red_method = red_method
-    self.inout_method = inout_method
+        '''    
+        :param int cutoff_idx: value that identifies the cut-off layer
+        :param int red_dim: dimension of the reduced space onto which we
+            project the high-dimensional vectors
+        :param str red_method: string that identifies the reduced method to 
+            use, e.g. 'AS', 'POD'
+        :param str inout_method: string the represents the technique to use for
+            the identification of the input-output map, e.g. 'PCE', 'ANN'
+        '''
+
+        self.cutoff_idx = cutoff_idx
+        self.red_dim = red_dim
+        self.red_method = red_method
+        self.inout_method = inout_method
 
     def _reduce_AS(self, pre_model, post_model, train_dataset):
         '''
@@ -119,9 +120,9 @@ class NetAdapter():
         '''
         n_neurons = 20
         targets = list(train_labels)
-        fnn = FNN(n_class, n_neurons)
+        fnn = FNN(self.red_dim, n_class, n_neurons)
         epochs = 500
-        fnn.training(epochs , matrix_red, targets)
+        training_fnn(fnn, epochs , matrix_red, targets)
         return net
 
     def _inout_mapping_PCE(self, proj_mat, pre_model, post_model, train_loader, train_labels):
