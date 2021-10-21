@@ -6,7 +6,7 @@ training and testing phases.
 import torch
 import torch.nn as nn
 
-from ml import RedNet, Net
+from ml import RedNet, FNN
 from ml.utils import PossibleCutIdx, spatial_gradients, give_inputs, matrixize
 from ATHENA.athena.active import ActiveSubspaces
 from ml.asmodel import get_ASModel_FD, ASModel, compute_Z_AS_space
@@ -119,9 +119,9 @@ class NetAdapter():
         '''
         n_neurons = 20
         targets = list(train_labels)
-        net = Net(n_class, n_neurons)
+        fnn = FNN(n_class, n_neurons)
         epochs = 500
-        net.training(epochs , matrix_red, targets)
+        fnn.training(epochs , matrix_red, targets)
         return net
 
     def _inout_mapping_PCE(self, proj_mat, pre_model, post_model, train_loader, train_labels):
