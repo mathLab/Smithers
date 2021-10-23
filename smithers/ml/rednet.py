@@ -1,32 +1,65 @@
 '''
 Class that handles the construction of the reduced network composed
-by the premodel, the POD layer and the final ANN
+by the premodel, the reduction layer and the final input-output map.
 '''
+import copy
 import torch
 import torch.nn as nn
-import copy
 
 class RedNet(nn.Module):
-    def __init__(self, premodel=None, POD_mat=None, ANN=None, checkpoint=None):
+    '''
+    Creation of the reduced Neural Network starting from the
+    different blocks that composes it: pre-model, projection
+    matrix proj_mat and input-output mapping inout_map.
+
+    :param int n_classes: number of classes that composes the dataset.
+    :param nn.Sequential premodel: sequential model representing the pre-model.
+        Default value set to None.
+    :param tensor proj_mat: projection matrix. Default value set to None.
+    :param nn.Module/list inout_map: input-output mapping. For example it can be
+        a trained model of FNN or a list with the trained model of PCE and the
+        corresponding PCE coefficients. Default value set to None.
+    :param path_file checkpoint: If None, you will use the previuos block to
+        initialize the reduced model, otherwise you will load them from the
+        checkpoint file given in input.
+    '''
+    def __init__(self, n_classes, premodel=None, proj_mat=None, inout_map=None,
+                 checkpoint=None):
         super(RedNet, self).__init__()
         if checkpoint is not None:
             rednet = torch.load(checkpoint, torch.device('cpu'))
             self.premodel = rednet['model'].premodel
-            self.POD_model = rednet['model'].POD_model
-            self.ANN = rednet['model'].ANN
+            self.proj_model = rednet['model'].proj_model
+            self.inout_map = rednet['model'].inout_map
         else:
             self.premodel = premodel
-            if isinstance(POD_mat, nn.Linear):
-                self.POD_model = POD_mat
+            if isinstance(proj_mat, nn.Linear):
+                self.proj_model = proj_mat
             else:
-                self.POD_model = nn.Linear(POD_mat.size()[0], POD_mat.size()[1], bias=False)
-                self.POD_model.weight.data = copy.deepcopy(POD_mat).t()
-            self.ANN = ANN
+                self.proj_model = nn.Linear(proj_mat.size()[0],
+                                            proj_mat.size()[1], bias=False)
+                self.proj_model.weight.data = copy.deepcopy(proj_mat).t()
+            if isinstance(inout_map, list):
+                self.inout_basis = inout_map[0]
+                self.inout_lay = nn.Linear(inout_map[0].nbasis, n_classes,
+                                           bias=False)
+                self.inout_lay.weight.data = copy.deepcopy(inout_map[1]).t()
+                self.inout_map = nn.Sequential(self.inout_basis, self.inout_lay)
+            else:
+                self.inout_map = inout_map
 
     def forward(self, x):
+        '''
+        Forward Phase.
+
+        :param tensor x: input for the reduced net with dimensions
+            n_images x n_input.
+        :return: output n_images x n_class
+        :rtype: tensor
+        '''
         x = self.premodel(x)
         x = x.view(x.size(0), -1)
-        x = self.POD_model(x)
-        x = self.ANN(x)
+        x = self.proj_model(x)
+        x = self.inout_map(x)
 
         return x

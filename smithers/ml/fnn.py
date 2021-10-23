@@ -34,6 +34,8 @@ class FNN(nn.Module):
 
         :param tensor x: input of the network with dimensions
             n_images x n_input
+        :return: output of the FNN n_images x n_class
+        :rtype: tensor
         '''
         x = torch.nn.Softplus()(self.fc1(x))
         #x = torch.nn.Softplus()(self.fc3(x))

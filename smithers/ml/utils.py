@@ -6,14 +6,13 @@ Neural Network
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 
 
 
 def get_seq_model(model):
     '''
     Takes a model with model.features and model.classifier and
-    returns a sequential model
+    returns a sequential model.
 
     :param nn.Module model: CNN chosen, for example VGG16
     :return: sequential formula of the
@@ -30,7 +29,7 @@ def get_seq_model(model):
                                         [nn.AdaptiveAvgPool2d((7, 7))] +
                                         list(model.classifier.children())))
     else:
-	if model.classifier_str == 'cifar':
+        if model.classifier_str == 'cifar':
             seq_model = nn.Sequential(*(list(model.features.children()) +
                                         [nn.Flatten(1, -1)] +
                                         [model.classifier]))
@@ -57,27 +56,27 @@ def PossibleCutIdx(seq_model):
     '''
     cutidx = []
     for i, m in seq_model.named_modules():
-        if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
+        if isinstance(m, (nn.Linear, nn.Conv2d)):# or isinstance(m, nn.Conv2d):
             cutidx.append(int(i))  #  Find the Linear or Conv2d Layer Idx
     return cutidx
 
 
-def give_inputs(dataset, pre_model):
+def give_inputs(dataset, model):
     '''
-    Generator for computing the inputs for the reduction layer, i.e. the
-    output of the pre-model.
+    Generator for computing the inputs for a layer, e.g the reduction
+    layer.
 
-    :param Dataset/list of tuples dataset: dataset containing the 
+    :param Dataset/list of tuples dataset: dataset containing the
         images/data.
-    :param nn.Sequential pre_model: Sequential container representing the
-        pre-model, i.e. the model cut on the cut-off layer.
-    :return: matrix of inputs
+    :param nn.Sequential model: Sequential container representing the
+        model, e.g. the pre-model.
+    :return: matrix of inputs/outputs of the model
     :rtype: numpy.ndarray
     '''
     for data in dataset:
         input0 = data[0].unsqueeze(0)  #add dimension as first axis
         target = torch.tensor([data[1]])
-        input_ = pre_model(input0)
+        input_ = model(input0)
         yield torch.squeeze(input_.flatten(1)).detach().numpy()
 
 def spatial_gradients(dataset, pre_model, post_model):
@@ -119,7 +118,7 @@ def matrixize(model, dataset, labels):
     the flatten output of the pre-model for each image of the
     dataset.
     :param nn.Sequential model: Sequential container representing the
-        model we are using (e.g. the pre_model). 
+        model we are using (e.g. the pre_model).
     :param Dataset dataset: dataset containing the images in exam.
     :param tensor labels: tensor representing the labels associated
         to each image in the dataset.
@@ -135,3 +134,66 @@ def matrixize(model, dataset, labels):
         matrix_features[:, i] = torch.squeeze(input_.flatten(1)).detach()
         i += 1
     return matrix_features
+
+
+def projection(proj_mat, data_loader, matrix):
+    '''
+    Funtion that performs the projection onto a space (e.g. the reduced
+    space) of a matrix.
+
+    :param torch.Tensor proj_mat: projection matrix.
+    :param iterable data_loader: iterable object for loading the dataset.
+        It iterates over the given dataset, obtained combining a
+        dataset(images and labels) and a sampler.
+    :param torch.Tensor matrix: matrix to project. Possible way to construct
+        it using the function matrixise in utils.py.
+    '''
+
+    matrix_red = torch.zeros(0)
+    num_batch = len(data_loader)
+    batch_old = 0
+    for idx_, (batch, target) in enumerate(data_loader):
+        if idx_ >= num_batch:
+            break
+
+        #batch = batch.to(device)
+
+        with torch.no_grad():
+            proj_data = (torch.transpose(matrix[batch_old : batch_old +
+                                                batch.size()[0], :], 0, 1) @
+                         proj_mat).cpu()
+            batch_old = batch.size()[0]
+        matrix_red = torch.cat([matrix_red, proj_data.cpu()])
+
+    return matrix_red
+
+
+def forward_dataset(model, data_loader):
+    '''
+    Forward of a model using the whole dataset, i.e. the forward is
+    performed by splitting the dataset in batches in order to reduce
+    the computational effort needed.
+
+    :param nn.Sequential/nn.Module model: model.
+    :param iterable data_loader: iterable object for loading the dataset.
+        It iterates over the given dataset, obtained combining a
+        dataset(images and labels) and a sampler.
+    :return: output of the model computed on the whole dataset.
+    :rtype: torch.Tensor
+    '''
+    out_model = torch.zeros(0)
+    num_batch = len(data_loader)
+    for idx_, (batch, target) in enumerate(data_loader):
+        if idx_ >= num_batch:
+            break
+
+        #batch = batch.to(device)
+
+        with torch.no_grad():
+            outputs = model(batch)
+        out_model = torch.cat([out_model, outputs.cpu()])
+        #TODO UNDERSTAND THE DIMENSIONS OF THE OUT_MODEL, 
+        #IF CORRECT (FATTO X RIGHE/COLONNE)
+        #UNIRE MATRIXIZE E FORWARD_DATASET,
+        # fare flatten (flatten 1d tensor = tensor)
+    return out_model

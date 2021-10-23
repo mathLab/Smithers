@@ -8,7 +8,7 @@ import torch.nn as nn
 
 from smithers.ml.rednet import RedNet
 from smithers.ml.fnn import FNN, training_fnn
-from smithers.ml.utils import PossibleCutIdx, spatial_gradients, give_inputs, matrixize
+from smithers.ml.utils import PossibleCutIdx, spatial_gradients, matrixize, forward_dataset, projection
 from ATHENA.athena.active import ActiveSubspaces
 from smithers.ml.asmodel import get_ASModel_FD, ASModel, compute_Z_AS_space
 from smithers.ml.pcemodel import PCEModel
@@ -50,13 +50,13 @@ class NetAdapter():
             images.
         :returns: tensor proj_mat representing the projection matrix
             for AS.
-        :rtype: tensor
+        :rtype: torch.Tensor
         '''
         grad = spatial_gradients(train_dataset, pre_model, post_model)
-        inputs = give_inputs(train_dataset, pre_model)
         asub = ActiveSubspaces(dim=self.red_dim, method='exact')
         asub.fit(gradients=grad)
         proj_mat = torch.tensor(asub.evects, dtype=input_type)
+        
         return proj_mat
     
     def _reduce_POD(self, matrix_features):
@@ -71,6 +71,7 @@ class NetAdapter():
         '''
         u,sigma,v = torch.svd(matrix_features)
         proj_mat = u[:, :self.red_dim]
+        
         return proj_mat
 
     def _reduce(self, pre_model, post_model, train_dataset, train_labels):
@@ -94,15 +95,18 @@ class NetAdapter():
         if self.red_method == 'AS':
             #code for AS
             proj_mat = self._reduce_AS(pre_model, post_model, train_dataset)
-            matrix_red = proj_mat(torch.transpose(matrix_features, 0, 1))
+        #    matrix_red = proj_mat(torch.transpose(matrix_features, 0, 1))
 
         elif self.red_method == 'POD':
             #code for POD
             proj_mat = self._reduce_POD(matrix_features)    	  	
-            matrix_red = torch.transpose(matrix_features, 0, 1) @ proj_mat
+        #    matrix_red = torch.transpose(matrix_features, 0, 1) @ proj_mat
             
         else:
             raise ValueError
+        
+        matrix_red = projection(proj_mat, data_loader, matrix_features)
+
         return matrix_red, proj_mat
 
     def _inout_mapping_FNN(self, matrix_red, train_labels, n_class):
@@ -125,7 +129,7 @@ class NetAdapter():
         training_fnn(fnn, epochs , matrix_red, targets)
         return net
 
-    def _inout_mapping_PCE(self, proj_mat, pre_model, post_model, train_loader, train_labels):
+    def _inout_mapping_PCE(self, proj_mat, post_model, train_loader, train_labels):
         '''
         Function responsible for the creation of the input-output map using
         the Polynomial Chaos Expansion method (PCE).
@@ -143,23 +147,16 @@ class NetAdapter():
         :return: trained model of PCE layer and PCE coeff
         :rtype: list
         '''
-        r_max = 200
-        train_max_batch = train_max_batch = len(train_loader)
-        AS_model = ASModel(proj_mat, r_max, device)
-        Z_train, y_train = compute_Z_AS_space(AS_model,
-                                      pre_model,
-                                      post_model,
-                                      train_loader,
-                                      train_max_batch,
-                                      device=device)
+
+        out_postmodel = forward_dataset(post_model, train_loader)
         mean = torch.mean(Z_train, 0).to(device)
         var = torch.std(Z_train, 0).to(device)
 
         PCE_model = PCEModel(mean, var)
         coeff, training_score_LR, training_score_labels = PCE_model.Training(\
-           Z_train,y_train,train_labels[:Z_train.shape[0]])
+           Z_train, out_postmodel, train_labels[:Z_train.shape[0]])
         PCE_coeff = torch.tensor(coeff, dtype=torch.float32).to(device)
-
+        return [PCE_model, PCE_coeff]
  
     def _inout_mapping(self, matrix_red, train_labels, n_class, proj_mat, pre_model, post_model, train_loader):
         '''
@@ -217,4 +214,5 @@ class NetAdapter():
         matrix_red, proj_mat = self.reduce(pre_model, post_model, train_dataset, train_labels)
         inout_map = self.inout_mapping(matrix_red, train_labels, proj_mat, pre_model, post_model, train_loader)
         reduced_net = RedNet(pre_model, proj_mat, inout_map)
+
         return reduced_net
