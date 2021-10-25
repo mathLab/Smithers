@@ -8,9 +8,8 @@ import torch.nn as nn
 
 from smithers.ml.rednet import RedNet
 from smithers.ml.fnn import FNN, training_fnn
-from smithers.ml.utils import PossibleCutIdx, spatial_gradients, matrixize, forward_dataset, projection
-from ATHENA.athena.active import ActiveSubspaces
-from smithers.ml.asmodel import get_ASModel_FD, ASModel, compute_Z_AS_space
+from smithers.ml.utils import PossibleCutIdx, spatial_gradients, forward_dataset, projection
+#from ATHENA.athena.active import ActiveSubspaces
 from smithers.ml.pcemodel import PCEModel
 
 if torch.cuda.is_available():
@@ -49,7 +48,7 @@ class NetAdapter():
         :param Dataset train_dataset: dataset containing the training
             images.
         :returns: tensor proj_mat representing the projection matrix
-            for AS.
+            for AS (n_feat x red_dim)
         :rtype: torch.Tensor
         '''
         grad = spatial_gradients(train_dataset, pre_model, post_model)
@@ -63,18 +62,18 @@ class NetAdapter():
         '''
         Function that performs the reduction using the Proper Orthogonal
         Decomposition (POD).
-        :param tensor matrix_features: (n_features x n_images) matrix
+        :param torch.Tensor matrix_features: (n_images x n_feat) matrix
             containing the output of the pre-model that needs to be reduced. 
         :returns: tensor proj_mat representing the projection matrix 
-            for POD.
-        :rtype: tensor
+            for POD (n_feat x red_dim).
+        :rtype: torch.Tensor
         '''
-        u,sigma,v = torch.svd(matrix_features)
+        u,sigma,v = torch.svd(torch.transpose(matrix_features,0,1))
         proj_mat = u[:, :self.red_dim]
-        
+
         return proj_mat
 
-    def _reduce(self, pre_model, post_model, train_dataset, train_labels):
+    def _reduce(self, pre_model, post_model, train_dataset, train_loader):
         '''
         Function that performs the reduction of the high dimensional
         output of the pre-model
@@ -84,28 +83,29 @@ class NetAdapter():
             the pre-model.
         :param Dataset train_dataset: dataset containing the training
             images.
-        :param tensor train_labels: tensor representing the labels associated
-            to each image in the train dataset.
+        :param iterable train_loader: iterable object for loading the dataset.
+            It iterates over the given dataset, obtained combining a
+            dataset(images and labels) and a sampler.
         :returns: tensors matrix_red and proj_mat containing the reduced output
-            of the pre-model and the projection matrix respectively.
-        :rtype: tensor
+            of the pre-model (n_images x red_dim) and the projection matrix
+            (n_feat x red_dim) respectively.
+        :rtype: torch.tensor
     	'''
-        matrix_features = matrixize(pre_model, train_dataset, train_labels)
+        #matrix_features = matrixize(pre_model, train_dataset, train_labels)
+        matrix_features = forward_dataset(pre_model, train_loader)
 
         if self.red_method == 'AS':
             #code for AS
             proj_mat = self._reduce_AS(pre_model, post_model, train_dataset)
-        #    matrix_red = proj_mat(torch.transpose(matrix_features, 0, 1))
 
         elif self.red_method == 'POD':
             #code for POD
             proj_mat = self._reduce_POD(matrix_features)    	  	
-        #    matrix_red = torch.transpose(matrix_features, 0, 1) @ proj_mat
             
         else:
             raise ValueError
         
-        matrix_red = projection(proj_mat, data_loader, matrix_features)
+        matrix_red = projection(proj_mat, train_loader, matrix_features)
 
         return matrix_red, proj_mat
 
@@ -114,9 +114,9 @@ class NetAdapter():
         Function responsible for the creation of the input-output map using
         a Feedfoprward Neural Network (FNN).
 
-        :param tensor matrix_red: matrix containing the reduced output
+        :param torch.tensor matrix_red: matrix containing the reduced output
        	    of the pre-model.
-        :param tensor train_labels: tensor representing the labels associated
+        :param torch.tensor train_labels: tensor representing the labels associated
             to each image in the train dataset.
         :param int n _class: number of classes that composes the dataset
         :return: trained model of the FNN
@@ -127,14 +127,15 @@ class NetAdapter():
         fnn = FNN(self.red_dim, n_class, n_neurons)
         epochs = 500
         training_fnn(fnn, epochs , matrix_red, targets)
-        return net
+
+        return fnn
 
     def _inout_mapping_PCE(self, proj_mat, post_model, train_loader, train_labels):
         '''
         Function responsible for the creation of the input-output map using
         the Polynomial Chaos Expansion method (PCE).
         
-        :param tensor proj_mat: projection matrix.
+        :param torch.tensor proj_mat: projection matrix.
         :param nn.Sequential pre_model: sequential model representing
             the pre-model.
         :param nn.Sequential post_model: sequential model representing
@@ -142,7 +143,7 @@ class NetAdapter():
         :param iterable train_loader: iterable object, it load the dataset for
             training. It iterates over the given dataset, obtained combining a
             dataset (images and labels) and a sampler.
-        :param tensor train_labels: tensor representing the labels associated
+        :param torch.tensor train_labels: tensor representing the labels associated
             to each image in the train dataset.
         :return: trained model of PCE layer and PCE coeff
         :rtype: list
@@ -156,9 +157,10 @@ class NetAdapter():
         coeff, training_score_LR, training_score_labels = PCE_model.Training(\
            Z_train, out_postmodel, train_labels[:Z_train.shape[0]])
         PCE_coeff = torch.tensor(coeff, dtype=torch.float32).to(device)
+
         return [PCE_model, PCE_coeff]
  
-    def _inout_mapping(self, matrix_red, train_labels, n_class, proj_mat, pre_model, post_model, train_loader):
+    def _inout_mapping(self, matrix_red, n_class, proj_mat, pre_model, post_model, train_labels, train_loader):
         '''
         Function responsible for the creation of the input-output map.
         :param tensor matrix_red: matrix containing the reduced output
@@ -190,9 +192,10 @@ class NetAdapter():
 
         else:
             raise ValueError
+
         return inout_map                        
 
-    def reduce_net(self, input_network, train_dataset, train_labels, n_class):
+    def reduce_net(self, input_network, train_dataset, train_labels, train_loader, n_class):
         '''
         Function that performs the reduction of the network
         :param nn.Sequential input_network: sequential model representing
@@ -201,18 +204,23 @@ class NetAdapter():
             in utils.py.
         :param Dataset train_dataset: dataset containing the training
             images
-        :param tensor train_labels: tensor representing the labels associated
+        :param torch.Tensor train_labels: tensor representing the labels associated
             to each image in the train dataset
+        :param iterable train_loader: iterable object for loading the dataset.
+            It iterates over the given dataset, obtained combining a
+            dataset(images and labels) and a sampler.
         :param int n _class: number of classes that composes the dataset
-        :return reduced_net:
+        :return: reduced net
+        :rtype: nn.Module
         '''
         input_type = train_dataset.__getitem__(0)[0].dtype
         possible_cut_idx = PossibleCutIdx(input_network)
         cut_idxlayer = possible_cut_idx[self.cutoff_idx]
         pre_model = input_network[:cut_idxlayer].to(dtype=input_type)
         post_model = input_network[cut_idxlayer:].to(dtype=input_type)
-        matrix_red, proj_mat = self.reduce(pre_model, post_model, train_dataset, train_labels)
-        inout_map = self.inout_mapping(matrix_red, train_labels, proj_mat, pre_model, post_model, train_loader)
-        reduced_net = RedNet(pre_model, proj_mat, inout_map)
+        matrix_red, proj_mat = self._reduce(pre_model, post_model,
+                                            train_dataset, train_loader)
+        inout_map = self._inout_mapping(matrix_red, n_class, proj_mat, pre_model, post_model, train_labels, train_loader)
+        reduced_net = RedNet(n_class, pre_model, proj_mat, inout_map)
 
         return reduced_net

@@ -15,7 +15,7 @@ class RedNet(nn.Module):
     :param int n_classes: number of classes that composes the dataset.
     :param nn.Sequential premodel: sequential model representing the pre-model.
         Default value set to None.
-    :param tensor proj_mat: projection matrix. Default value set to None.
+    :param torch.tensor proj_mat: projection matrix. Default value set to None.
     :param nn.Module/list inout_map: input-output mapping. For example it can be
         a trained model of FNN or a list with the trained model of PCE and the
         corresponding PCE coefficients. Default value set to None.
@@ -39,6 +39,7 @@ class RedNet(nn.Module):
                 self.proj_model = nn.Linear(proj_mat.size()[0],
                                             proj_mat.size()[1], bias=False)
                 self.proj_model.weight.data = copy.deepcopy(proj_mat).t()
+
             if isinstance(inout_map, list):
                 self.inout_basis = inout_map[0]
                 self.inout_lay = nn.Linear(inout_map[0].nbasis, n_classes,
@@ -52,10 +53,10 @@ class RedNet(nn.Module):
         '''
         Forward Phase.
 
-        :param tensor x: input for the reduced net with dimensions
+        :param torch.tensor x: input for the reduced net with dimensions
             n_images x n_input.
         :return: output n_images x n_class
-        :rtype: tensor
+        :rtype: torch.tensor
         '''
         x = self.premodel(x)
         x = x.view(x.size(0), -1)

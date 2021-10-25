@@ -79,9 +79,9 @@ class Testutils(TestCase):
         seq_model = get_seq_model(model)
         pre_model = seq_model[:11]
         post_model = seq_model[11:]
-        input1 = (torch.rand(3, 224, 224), torch.IntTensor([5]))
-        input2 = (torch.rand(3, 224, 224), torch.IntTensor([9]))
-        input3 = (torch.rand(3, 224, 224), torch.IntTensor([3]))
+        input1 = (torch.rand(3, 224, 224), torch.IntTensor([4]))
+        input2 = (torch.rand(3, 224, 224), torch.IntTensor([8]))
+        input3 = (torch.rand(3, 224, 224), torch.IntTensor([1]))
         inputs = [input1, input2, input3]
         gradients = []
         for grad in spatial_gradients(inputs, pre_model, post_model):
@@ -93,10 +93,10 @@ class Testutils(TestCase):
                                pretrained=True)
         model.classifier_str = 'standard'
         seq_model = get_seq_model(model)
-        pre_model = seq_model[:11]
-        post_model = seq_model[11:]
-        input1 = (torch.rand(3, 224, 224), torch.IntTensor([5]))
-        input2 = (torch.rand(3, 224, 224), torch.IntTensor([9]))
+        pre_model = seq_model[:8]
+        post_model = seq_model[8:]
+        input1 = (torch.rand(3, 224, 224), torch.IntTensor([1]))
+        input2 = (torch.rand(3, 224, 224), torch.IntTensor([2]))
         input3 = (torch.rand(3, 224, 224), torch.IntTensor([3]))
         inputs = [input1, input2, input3]
         gradients = []
@@ -113,9 +113,9 @@ class Testutils(TestCase):
         seq_model = get_seq_model(model)
         pre_model = seq_model[:9]
         post_model = seq_model[9:]
-        input1 = (torch.rand(3, 224, 224), torch.IntTensor([5]))
-        input2 = (torch.rand(3, 224, 224), torch.IntTensor([9]))
-        input3 = (torch.rand(3, 224, 224), torch.IntTensor([3]))
+        input1 = (torch.rand(3, 224, 224), torch.IntTensor([6]))
+        input2 = (torch.rand(3, 224, 224), torch.IntTensor([7]))
+        input3 = (torch.rand(3, 224, 224), torch.IntTensor([0]))
         inputs = [input1, input2, input3]
         gradients = []
         generator = spatial_gradients(inputs, pre_model, post_model)
@@ -147,9 +147,9 @@ class Testutils(TestCase):
         self.assertEqual(list(out_model.size()), [10, 1000])
 
     def test_forwarddataset_02(self):
-        inps = torch.arange(10 * 3 * 224 * 224,
-                            dtype=torch.float32).view(10, 3, 224, 224)
-        tgts = torch.arange(10, dtype=torch.float32)
+        inps = torch.arange(50 * 3 * 224 * 224,
+                            dtype=torch.float32).view(50, 3, 224, 224)
+        tgts = torch.arange(50, dtype=torch.float32)
         dataset = TensorDataset(inps, tgts)
         model = torch.hub.load('pytorch/vision:v0.10.0', 'vgg16',
                                pretrained=True)
@@ -158,4 +158,4 @@ class Testutils(TestCase):
         pre_model = seq_model[:11]
         data_loader = DataLoader(dataset, batch_size=2, pin_memory=True)
         out_model = forward_dataset(pre_model, data_loader)
-        self.assertEqual(list(out_model.size()), [10, 256 * 56 * 56])
+        self.assertEqual(list(out_model.size()), [50, 256 * 56 * 56])
