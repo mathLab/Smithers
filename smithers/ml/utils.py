@@ -12,21 +12,23 @@ import torch.nn.functional as F
 def get_seq_model(model):
     '''
     Takes a model with model.features and model.classifier and
-    returns a sequential model.
+    returns a sequential model. If attribute self.classifier_str
+    is not present, add this attribute to the model before running
+    this function.
 
-    :param nn.Module model: CNN chosen, for example VGG16
-    :return: sequential formula of the
-        model that has be given in input
+    :param nn.Module model: CNN chosen, for example VGG16.
+    :return: sequential formula of the model that has be given in input.
     :rtype: nn.Sequential
     '''
     if list(model.classifier.children()):
-        if model.classifier_str == 'cifar':
+        if model.classifier_str == 'cifar' :
             seq_model = nn.Sequential(*(list(model.features.children()) +
                                         [nn.Flatten(1, -1)] +
                                         list(model.classifier.children())))
         else:  #if model.classifier_str == 'standard':
             seq_model = nn.Sequential(*(list(model.features.children()) +
                                         [nn.AdaptiveAvgPool2d((7, 7))] +
+                                        [nn.Flatten(1, -1)]+
                                         list(model.classifier.children())))
     else:
         if model.classifier_str == 'cifar':
@@ -141,12 +143,15 @@ def projection(proj_mat, data_loader, matrix):
     Funtion that performs the projection onto a space (e.g. the reduced
     space) of a matrix.
 
-    :param torch.Tensor proj_mat: projection matrix.
+    :param torch.Tensor proj_mat: projection matrix n_feat x n_red.dim.
     :param iterable data_loader: iterable object for loading the dataset.
         It iterates over the given dataset, obtained combining a
         dataset(images and labels) and a sampler.
-    :param torch.Tensor matrix: matrix to project. Possible way to construct
-        it using the function matrixise in utils.py.
+    :param torch.Tensor matrix: matrix to project n_images x n_feat.
+        Possible way to construct it using the function matrixise in
+        utils.py.
+    :return: reduced matrix n_images x n_red.dim
+    :rtype: torch.Tensor
     '''
 
     matrix_red = torch.zeros(0)
@@ -159,8 +164,8 @@ def projection(proj_mat, data_loader, matrix):
         #batch = batch.to(device)
 
         with torch.no_grad():
-            proj_data = (torch.transpose(matrix[batch_old : batch_old +
-                                                batch.size()[0], :], 0, 1) @
+            proj_data = (matrix[batch_old : batch_old +
+                                                batch.size()[0], :] @
                          proj_mat).cpu()
             batch_old = batch.size()[0]
         matrix_red = torch.cat([matrix_red, proj_data.cpu()])
@@ -178,7 +183,9 @@ def forward_dataset(model, data_loader):
     :param iterable data_loader: iterable object for loading the dataset.
         It iterates over the given dataset, obtained combining a
         dataset(images and labels) and a sampler.
-    :return: output of the model computed on the whole dataset.
+    :return: output of the model computed on the whole dataset with
+        dimensions n_images x n_feat (corresponds to n_class for the last
+        layer)
     :rtype: torch.Tensor
     '''
     out_model = torch.zeros(0)
@@ -191,9 +198,7 @@ def forward_dataset(model, data_loader):
 
         with torch.no_grad():
             outputs = model(batch)
+            outputs = torch.squeeze(outputs.flatten(1)).detach()
         out_model = torch.cat([out_model, outputs.cpu()])
-        #TODO UNDERSTAND THE DIMENSIONS OF THE OUT_MODEL, 
-        #IF CORRECT (FATTO X RIGHE/COLONNE)
-        #UNIRE MATRIXIZE E FORWARD_DATASET,
-        # fare flatten (flatten 1d tensor = tensor)
+
     return out_model
