@@ -12,12 +12,12 @@ class Testfnn(TestCase):
     def test_forward(self):
         fnn = FNN(50, 40, 10)
         input_net = torch.rand(12, 50)
-        out = fnn(input)
+        out = fnn(input_net)
         self.assertEqual(list(out.size()), [12, 40])
 
     def test_training(self):
         fnn = FNN(30, 4, 40)
         input_net = torch.rand(12, 30)
         real_out = torch.rand(12, 4)
-        training_fnn(fnn, 10, input, real_out)
+        training_fnn(fnn, 10, input_net, real_out)
         self.assertEqual(fnn.n_hid, 40)

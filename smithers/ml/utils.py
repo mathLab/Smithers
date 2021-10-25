@@ -21,7 +21,7 @@ def get_seq_model(model):
     :rtype: nn.Sequential
     '''
     if list(model.classifier.children()):
-        if model.classifier_str == 'cifar' :
+        if model.classifier_str == 'cifar':
             seq_model = nn.Sequential(*(list(model.features.children()) +
                                         [nn.Flatten(1, -1)] +
                                         list(model.classifier.children())))
@@ -77,7 +77,7 @@ def give_inputs(dataset, model):
     '''
     for data in dataset:
         input0 = data[0].unsqueeze(0)  #add dimension as first axis
-        target = torch.tensor([data[1]])
+        #target = torch.tensor([data[1]])
         input_ = model(input0)
         yield torch.squeeze(input_.flatten(1)).detach().numpy()
 
@@ -99,7 +99,7 @@ def spatial_gradients(dataset, pre_model, post_model):
     '''
     for data in dataset:
         input0 = data[0].unsqueeze(0)  #add dimension as first axis
-        target = torch.tensor([data[1]])
+        target = torch.LongTensor([data[1]])
         input_ = pre_model(input0)
         out_post = post_model(input_)
         output_ = F.nll_loss(out_post, target, reduce=False)
@@ -165,7 +165,7 @@ def projection(proj_mat, data_loader, matrix):
 
         with torch.no_grad():
             proj_data = (matrix[batch_old : batch_old +
-                                                batch.size()[0], :] @
+                                batch.size()[0], :] @
                          proj_mat).cpu()
             batch_old = batch.size()[0]
         matrix_red = torch.cat([matrix_red, proj_data.cpu()])
