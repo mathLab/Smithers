@@ -1,8 +1,6 @@
 from unittest import TestCase
-import types
 import torch
 import torch.nn as nn
-import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
 from smithers.ml.netadapter import NetAdapter
 from smithers.ml.utils import get_seq_model
@@ -29,12 +27,12 @@ class TestNetAdapter(TestCase):
     def test_reducenet_01(self):
         netadapter = NetAdapter(11, 50, 'AZ', 'PCE')
         with self.assertRaises(ValueError):
-            red_net = netadapter.reduce_net(seq_model, train_dat, tgts, train_load, 40)
+            netadapter.reduce_net(seq_model, train_dat, tgts, train_load, 40)
 
     def test_reducenet_02(self):
         netadapter = NetAdapter(5, 50, 'POD', 'ANN')
         with self.assertRaises(ValueError):
-            red_net = netadapter.reduce_net(seq_model, train_dat, tgts, train_load, 40)
+            netadapter.reduce_net(seq_model, train_dat, tgts, train_load, 40)
 
     def test_reducenet_03(self):
         netadapter = NetAdapter(5, 30, 'POD', 'FNN')

@@ -1,8 +1,13 @@
+'''
+Module focused on the implementation of the Polunomial Chaos
+Expansion Layer (PCE).
+'''
+
 import torch
+import torch.nn as nn
 import scipy.misc
 from sklearn.linear_model import LinearRegression
 import numpy as np
-import torch.nn as nn
 
 
 class PCEModel(nn.Module):
@@ -13,14 +18,14 @@ class PCEModel(nn.Module):
     Ivan Oseledets, and Zheng Zhang. "Active Subspace of Neural
     Networks: Structural Analysis and Universal Attacks".
     accepted by SIAM Journal on Mathematics of Data Science (SIMODS)
-    
-    :param Tensor mean: tensor containing the mean value of all elements
-        in the input tensor (output AS layer)
-    :param Tensor var: tensor containing the varinace of all elements
-       	in the input tensor (output AS layer) 
-    :param int d: If is not specified, its value is set to the default 
+
+    :param torch.tensor mean: tensor containing the mean value of all
+        elements in the input tensor (output AS layer)
+    :param torch.tensor var: tensor containing the variance of all
+       	elements in the input tensor (output AS layer)
+    :param int d: If is not specified, its value is set to the default
         one, that is 50.
-    :param int p: If is not specified, its value is set to the default 
+    :param int p: If is not specified, its value is set to the default
         value 2.
     :param torch.device device: object representing the device on
         which a torch.Tensor is or will be allocated. If None, the device
@@ -35,7 +40,7 @@ class PCEModel(nn.Module):
         # scipy.special.comb(N,k):The number of combinations of N
         # things taken k at a time.
         self.nbasis = scipy.special.comb(d + p, p).astype(int)
-        if device == None:
+        if device is None:
             self.device = 'cpu'
         else:
             self.device = device
@@ -52,39 +57,37 @@ class PCEModel(nn.Module):
     def NormalBasis(self):
         '''
         Basis Functions for normal distribution
-        :return: tensor B: matrix containing the basis functions
-        for normal distribution 
+        :return: matrix containing the basis functions for normal
+            distribution.
+        :rtype: torch.tensor
         '''
-        p = self.p
-        B = torch.zeros([p + 1, p + 1])
+        B = torch.zeros([self.p + 1, self.p + 1])
         B[0, 0] = 1  # 0nd order
-        if p >= 1:
+        if self.p >= 1:
             B[1, 1] = 2  # 1st order
-        for i in range(1, p):  # i-th order
+        for i in range(1, self.p):  # i-th order
             B[i + 1, 1:i + 2] = 2 * B[i, :i + 1]
             B[i + 1, :i] -= 2 * i * B[i - 1, :i]
         return B
 
-    def PolyVal(self, x, oneDbasis):
+    def PolyVal(self, x):
         '''
-        Functions that handles the avaluation of the basis function at the
+        Functions that handles the evaluation of the basis function at the
         input vector
-        :param tensor x: input tensor where we evaluate the functions at
-        :param tnesor oneDbasis: output matrix of NormalBasis function
-        :return tensor polyval: tensor containing the basis functions
-            evaluated at x
+        :param torch.tensor x: input tensor where we evaluate the functions at
+        :return: tensor containing the basis functions evaluated at x
+        :rtype: torch.tensor
         '''
-        p = self.p
-        [n, d] = x.shape
-        x_pows = torch.zeros((n, d, p + 1), dtype=torch.float32)
-        for i in range(p + 1):
+        [n, m] = x.shape
+        x_pows = torch.zeros((n, m, self.p + 1), dtype=torch.float32)
+        for i in range(self.p + 1):
             x_pows[:, :, i] = x**i
 
-        polyval = torch.zeros((n, d, p + 1), dtype=torch.float32)
-        for ip in range(p + 1):
+        polyval = torch.zeros((n, m, self.p + 1), dtype=torch.float32)
+        for ip in range(self.p + 1):
             for i in range(ip + 1):
-                if oneDbasis[ip, i] != 0:
-                    polyval[:, :, ip] += oneDbasis[ip, i] * x_pows[:, :, i]
+                if self.oneDbasis[ip, i] != 0:
+                    polyval[:, :, ip] += self.oneDbasis[ip, i] * x_pows[:, :, i]
         return polyval.to(self.device)
 
     def forward(self, x):
@@ -92,49 +95,45 @@ class PCEModel(nn.Module):
         Function that handles the evaluation of the basis functions
         at input x scaled with mean and variance and creation of the
         related matrix
-        :param tensor x: tensor where we compute the basis functions
-            (input if that layer, i.e. output As layer)
-        :return: tensor Phi: matrix containing the basis functions evaluated
-            at x
+        :param torch.tensor x: tensor where we compute the basis functions
+            (input of that layer, e.g. output reduction layer)
+        :return: matrix containing the basis functions evaluated at x
+        :rtype: torch.tensor
         '''
-        mean = self.mean
-        var = self.var
-        idxset = self.idxset
-        #p = self.p
-        d = len(mean)
-        oneDbasis = self.oneDbasis
-        assert (len(var) == d)
-        for i in range(d):
-            x[:, i] = (x[:, i] - mean[i]) / var[i]
+        k = len(self.mean)
+        assert len(self.var) == k
+        for i in range(k):
+            x[:, i] = (x[:, i] - self.mean[i]) / self.var[i]
 
-        oneDpolyval = self.PolyVal(x, oneDbasis)
+        oneDpolyval = self.PolyVal(x)
 
         Phi = torch.ones([x.shape[0], self.nbasis],
                          dtype=torch.float32).to(self.device)
-        for j in range(d):
-            Phi *= oneDpolyval[:, j, idxset[:, j]]
+        for j in range(k):
+            Phi *= oneDpolyval[:, j, self.idxset[:, j]]
         return Phi
 
     def Training(self, x, y, label):
         '''
-        Function that implements the training procedure of ASNet
-        :param tensor x: tensor representing the output of the AS layer
-        :param tensor y: tensor representing the total output of the net
-        :param tensor label: tensor representing the labels associated
+        Function that implements the training procedure of the PCEmodel
+        :param torch.tensor x: tensor representing the output of the
+             reduction layer
+        :param torch.tensor y: tensor representing the total output of the
+             net
+        :param torch.tensor label: tensor representing the labels associated
             to each image in the train dataset
-        :return: np.array coeff, float score_approx, score_label: coeff 
-            contains the coefficients of the linear combination of the basis
-            functions, score_approx represents the coefficient of determination
-            R^2 of the prediction, whereas score_label represent the scores
-            for each image
+        :return: coefficients of the linear combination of the basis
+            functions, coefficient of determination R^2 of the prediction,
+            scores for each image
+        :rtype: np.ndarray, float, float
         '''
         Phi = self.forward(x)
 
-        if type(Phi) != np.ndarray:
+        if not isinstance(Phi, np.ndarray):
             Phi = Phi.cpu().detach().numpy()
-        if type(y) != np.ndarray:
+        if not isinstance(y, np.ndarray):
             y = y.cpu().detach().numpy()
-        if type(label) != np.ndarray:
+        if not isinstance(label, np.ndarray):
             label = label.cpu().numpy()
 
         LR = LinearRegression(fit_intercept=False).fit(Phi, y)
@@ -147,18 +146,27 @@ class PCEModel(nn.Module):
         return coeff, score_approx, score_label
 
     def Inference(self, x, coeff):
-        #Phi = self.BasisMat(x)
+        '''
+        Inference function
+        :param torch.tensor x: input tensor
+        :param torch.tensor coeff: coefficient tensor
+        :return: inference matrix
+        :rtype: torch.tensor
+        '''
         Phi = self.forward(x)
         if Phi.shape[1] == coeff.shape[0]:
             y = Phi @ coeff.to(self.device)
         else:
-            y = Phi @ coeff.t().to(self.device)
+            y = Phi.t() @ coeff.t().to(self.device)
         return y
 
 
 def indexset(d, p):
     '''
+    :param int d
+    :param int p
     :return: tensor IdxMat
+    :rtype: torch.tensor
     '''
     if d == 1:
         IdxMat = p * torch.ones((1, 1), dtype=torch.int64)
@@ -175,6 +183,3 @@ def indexset(d, p):
                 IdxMat = torch.cat((IdxMat, Idx_tmp), dim=0)
 
     return IdxMat
-
-
-
