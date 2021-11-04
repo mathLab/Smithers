@@ -1,5 +1,5 @@
 '''
-Module focused on the implementation of VGG
+Module focused on the implementation of VGG.
 '''
 import torch
 import torch.nn as nn
