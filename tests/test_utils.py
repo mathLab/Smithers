@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
-from smithers.ml.utils import get_seq_model, PossibleCutIdx, spatial_gradients, projection, forward_dataset
+from smithers.ml.utils import get_seq_model, PossibleCutIdx, spatial_gradients, projection, forward_dataset, decimate
 
 class Testutils(TestCase):
     def test_get_seq_model_01(self):
@@ -107,7 +107,7 @@ class Testutils(TestCase):
         self.assertEqual(len(gradients), 2)
 
     def test_spatial_gradients_03(self):
-        model = torch.hub.load('pytorch/vision:v0.10.0', 'vgg11',
+        model = torch.hub.load('pytorch/vision:v0.9.0', 'vgg11',
                                pretrained=True)
         model.classifier_str = 'standard'
         seq_model = get_seq_model(model)
@@ -159,3 +159,13 @@ class Testutils(TestCase):
         data_loader = DataLoader(dataset, batch_size=2, pin_memory=True)
         out_model = forward_dataset(pre_model, data_loader)
         self.assertEqual(list(out_model.size()), [50, 256 * 56 * 56])
+        
+    def test_constructor_decimate_(self):
+        tensor = torch.rand((100, 120, 3, 5))
+        new_tensor = decimate(tensor, [4, 3, None, 2])
+
+    def test_decimate(self):
+        tensor = torch.rand((100, 140, 30, 4))
+        new_tensor = decimate(tensor, [4, 3, 2, None])
+        self.assertEqual(list(new_tensor.size()), [25, 47, 15, 4])
+        assert isinstance(new_tensor, torch.Tensor)

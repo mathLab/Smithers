@@ -202,3 +202,72 @@ def forward_dataset(model, data_loader):
         out_model = torch.cat([out_model, outputs.cpu()])
 
     return out_model
+    
+def decimate(tensor, m):
+    '''
+    Decimate a tensor by a factor 'm', i.e. downsample by keeping every
+    'm'th value. This is used when we convert FC layers to equivalent
+    Convolutional layers, but of a smaller size.
+    :param torch.Tensor tensor: tensor to be decimated
+    :param list m: list of decimation factors for each dimension of the
+        tensor; None if not to be decimated along a dimension
+    :return: decimated tensor
+    :rtype: torch.Tensor
+    '''
+    assert tensor.dim() == len(m)
+    for d in range(tensor.dim()):
+        if m[d] is not None:
+            tensor = tensor.index_select(dim=d,
+                                         index=torch.arange(start=0,
+                                                            end=tensor.size(d),
+                                                            step=m[d]).long())
+
+    return tensor
+    
+def Total_param(model, storage_per_param=4):
+    '''
+    Function that computes the total number of parameters
+
+    :param nn.Module model: part of the net in exam
+    :param int storage_per_param: memory needed to store a parameter.
+        Default value set at 4.
+    :return: total number of parameters
+    :rtype: int
+    '''
+    total_params = 0
+    for t in filter(lambda p: p.requires_grad, model.parameters()):
+        total_params += np.prod(t.data.cpu().numpy().shape)
+    return total_params / 2**20 * storage_per_param
+    
+def Total_flops(model, device, is_ASNet=False, p=2, nAS=50):
+    '''
+    Function that computes the total number of flops
+
+    :param nn.Module model: part of the net in exam
+    :param torch.device device: object representing the device on
+        which a torch.Tensor is or will be allocated.
+    :param bool is_ASNet: Default value set at False.
+    :param int p:
+    :param int nAS: number of active neurons. Default value is
+        set at 50.
+    :return: total number of flops
+    :rtype: float
+    '''
+    x = torch.ones([1, 3, 32, 32]).to(device)
+    flops = 0.
+    for i, m in model.named_modules():
+        xold = x
+        if isinstance(m, nn.MaxPool2d):
+            x = m(x)
+        if isinstance(m, nn.Conv2d):
+            x = m(x)
+            flops += xold.shape[1]*x.shape[1:].numel()*\
+                    torch.tensor(m.kernel_size).prod()
+        if isinstance(m, nn.Linear):
+            flops += m.in_features * m.out_features
+
+    if is_ASNet:
+        flops += p * (model.PCE.in_features + nAS)  #Basis function
+    return float(flops) / 10**6
+
+
