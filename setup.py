@@ -1,6 +1,4 @@
-from setuptools import setup, Command, find_packages
-import os
-import sys
+from setuptools import setup, find_packages
 
 meta = {}
 with open("smithers/meta.py") as fp:
@@ -8,12 +6,15 @@ with open("smithers/meta.py") as fp:
 
 # Package meta-data.
 NAME = meta['__title__']
-DESCRIPTION = "Smithers' a Mathematical Interdisciplinary Toolbox for Helping Engineers Researchers and Scientist"
+DESCRIPTION = (
+    "Smithers' a Mathematical Interdisciplinary Toolbox for Helping Engineers "
+    "Researchers and Scientist"
+)
 URL = 'https://github.com/mathLab/Smithers'
 MAIL = meta['__mail__']
 AUTHOR = meta['__author__']
 VERSION = meta['__version__']
-KEYWORDS=''
+KEYWORDS = 'toolbox math'
 
 REQUIRED = [
     'future', 'numpy', 'scipy',	'matplotlib',
@@ -22,6 +23,7 @@ REQUIRED = [
 EXTRAS = {
     'docs': ['Sphinx', 'sphinx_rtd_theme'],
     'vtk': ['vtk'],
+    'test': ['pytest', 'pytest-cov'],
 }
 
 LDESCRIPTION = (
@@ -39,7 +41,7 @@ setup(
     long_description=LDESCRIPTION,
     author=AUTHOR,
     author_email=MAIL,
-	classifiers=[
+    classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
@@ -48,18 +50,16 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Intended Audience :: Science/Research',
         'Topic :: Scientific/Engineering :: Mathematics'
-	],
-	keywords=KEYWORDS,
-	url=URL,
-	license='MIT',
-	packages=find_packages(),
+    ],
+    keywords=KEYWORDS,
+    url=URL,
+    license='MIT',
+    packages=find_packages(),
     install_requires=REQUIRED,
     extras_require=EXTRAS,
-    test_suite='nose.collector',
-	tests_require=['nose'],
-	include_package_data=True,
+    include_package_data=True,
     package_data={
         NAME: ["dataset/datasets/*/*.npy"],
     },
-	zip_safe=False,
+    zip_safe=False,
 )
