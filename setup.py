@@ -58,5 +58,8 @@ setup(
     test_suite='nose.collector',
 	tests_require=['nose'],
 	include_package_data=True,
+    package_data={
+        NAME: ["dataset/datasets/*/*.npy"],
+    },
 	zip_safe=False,
 )
