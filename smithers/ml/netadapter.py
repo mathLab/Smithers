@@ -123,6 +123,7 @@ class NetAdapter():
         :rtype: nn.Module
         '''
         n_neurons = 20
+        print('d')
         targets = list(train_labels)
         fnn = FNN(self.red_dim, n_class, n_neurons)
         epochs = 500
@@ -217,6 +218,7 @@ class NetAdapter():
         input_type = train_dataset.__getitem__(0)[0].dtype
         possible_cut_idx = PossibleCutIdx(input_network)
         cut_idxlayer = possible_cut_idx[self.cutoff_idx]
+        print('ff')
         pre_model = input_network[:cut_idxlayer].to(dtype=input_type)
         post_model = input_network[cut_idxlayer:].to(dtype=input_type)
         out_model = forward_dataset(input_network, train_loader)

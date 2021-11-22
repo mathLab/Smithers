@@ -16,7 +16,7 @@ class VGG(nn.Module):
     (https://pytorch.org/docs/stable/_modules/torchvision/models/vgg.html#vgg16)
     and the one than can be found in this Pytorch tutorial for Object Detection:
     https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Object-Detection.
-    
+
     :param list cfg: If None, returns the configuration of VGG16. Otherwise
         a list of numbers and string 'M', representing all the layers of
         the net (its configuration), where the numbers represent the number

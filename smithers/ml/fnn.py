@@ -19,14 +19,19 @@ class FNN(nn.Module):
         to the number of classes that compose the dataset.
     :param int n_hid: number of hidden neurons.
     '''
-    def __init__(self, n_input, n_class, n_hid):
+    def __init__(self, n_input, n_class, n_hid, cifar=None):
         super(FNN, self).__init__()
         self.n_input = n_input
         self.n_class = n_class
         self.n_hid = n_hid
         self.fc1 = nn.Linear(self.n_input, self.n_hid)
-        self.fc2 = nn.Linear(self.n_hid, self.n_class)
-        #self.fc3 = nn.Linear(self.n_hid, self.n_hid)
+        self.fc2 = nn.Linear(self.n_hid, self.n_hid)
+        self.fc3 = nn.Linear(self.n_hid, self.n_hid)
+        self.fc4 = nn.Linear(self.n_hid, self.n_hid)
+        self.fc5 = nn.Linear(self.n_hid, self.n_hid)
+        self.fc6 = nn.Linear(self.n_hid, self.n_hid)
+        self.fc7 = nn.Linear(self.n_hid, self.n_class)
+        self.cifar = cifar
 
     def forward(self, x):
         '''
@@ -37,9 +42,17 @@ class FNN(nn.Module):
         :return: output of the FNN n_images x n_class
         :rtype: tensor
         '''
-        x = torch.nn.Softplus()(self.fc1(x))
-        #x = torch.nn.Softplus()(self.fc3(x))
-        x = self.fc2(x)
+        if self.cifar is not None:
+            x = x.view(x.size(0), -1)
+#        x = torch.nn.Softplus()(self.fc1(x))
+#        x = torch.nn.Softplus()(self.fc2(x))
+        x = torch.nn.ReLU()(self.fc1(x))
+        x = torch.nn.ReLU()(self.fc2(x))
+        x = torch.nn.ReLU()(self.fc3(x))
+        x = torch.nn.ReLU()(self.fc4(x))
+        x = torch.nn.ReLU()(self.fc5(x))
+        x = torch.nn.ReLU()(self.fc6(x))
+        x = self.fc7(x)
         return x
 
 

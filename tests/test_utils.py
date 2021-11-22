@@ -159,10 +159,6 @@ class Testutils(TestCase):
         data_loader = DataLoader(dataset, batch_size=2, pin_memory=True)
         out_model = forward_dataset(pre_model, data_loader)
         self.assertEqual(list(out_model.size()), [50, 256 * 56 * 56])
-        
-    def test_constructor_decimate_(self):
-        tensor = torch.rand((100, 120, 3, 5))
-        new_tensor = decimate(tensor, [4, 3, None, 2])
 
     def test_decimate(self):
         tensor = torch.rand((100, 140, 30, 4))
