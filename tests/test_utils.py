@@ -101,7 +101,7 @@ class Testutils(TestCase):
         inputs = [input1, input2, input3]
         gradients = []
         generator = spatial_gradients(inputs, pre_model, post_model)
-        for i in range(2):
+        for _ in range(2):
             grad = next(generator)
             gradients.append(grad)
         self.assertEqual(len(gradients), 2)
@@ -119,7 +119,7 @@ class Testutils(TestCase):
         inputs = [input1, input2, input3]
         gradients = []
         generator = spatial_gradients(inputs, pre_model, post_model)
-        for i in range(2, 3):
+        for _ in range(2, 3):
             grad = next(generator)
             gradients.append(grad)
         self.assertEqual(len(gradients), 1)

@@ -158,7 +158,7 @@ def projection(proj_mat, data_loader, matrix):
     matrix_red = torch.zeros(0)
     num_batch = len(data_loader)
     batch_old = 0
-    for idx_, (batch, target) in enumerate(data_loader):
+    for idx_, (batch, _) in enumerate(data_loader):
         if idx_ >= num_batch:
             break
 
@@ -203,7 +203,7 @@ def forward_dataset(model, data_loader):
         out_model = torch.cat([out_model, outputs.cpu()])
 
     return out_model
-    
+
 def decimate(tensor, m):
     '''
     Decimate a tensor by a factor 'm', i.e. downsample by keeping every
@@ -224,7 +224,7 @@ def decimate(tensor, m):
                                                             step=m[d]).long())
 
     return tensor
-    
+
 def Total_param(model, storage_per_param=4):
     '''
     Function that computes the total number of parameters
@@ -239,7 +239,7 @@ def Total_param(model, storage_per_param=4):
     for t in filter(lambda p: p.requires_grad, model.parameters()):
         total_params += np.prod(t.data.cpu().numpy().shape)
     return total_params / 2**20 * storage_per_param
-    
+
 def Total_flops(model, device, is_ASNet=False, p=2, nAS=50):
     '''
     Function that computes the total number of flops
@@ -256,7 +256,7 @@ def Total_flops(model, device, is_ASNet=False, p=2, nAS=50):
     '''
     x = torch.ones([1, 3, 32, 32]).to(device)
     flops = 0.
-    for i, m in model.named_modules():
+    for _, m in model.named_modules():
         xold = x
         if isinstance(m, nn.MaxPool2d):
             x = m(x)

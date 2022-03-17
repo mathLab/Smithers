@@ -30,6 +30,17 @@ class NetAdapter():
             use, e.g. 'AS', 'POD'
         :param str inout_method: string the represents the technique to use for
             the identification of the input-output map, e.g. 'PCE', 'ANN'
+
+        :Example:
+
+            >>> from smithers.ml.netadapter import NetAdapter
+            >>> netadapter = NetAdapter(6, 50, 'POD', 'FNN')
+            >>> original_network = import_net() # user defined method to load/build the original model
+            >>> train_data = construct_dataset(path_to_dataset)
+            >>> train_loader = load_dataset(train_data)
+            >>> train_labels = train_data.targets
+            >>> n_class = 10
+            >>> red_model = netadapter.reduce_net(original_network, train_data, train_labels, train_loader, n_class)
         '''
 
         self.cutoff_idx = cutoff_idx
@@ -52,7 +63,7 @@ class NetAdapter():
         '''
         input_type = train_dataset.__getitem__(0)[0].dtype
         grad = spatial_gradients(train_dataset, pre_model, post_model)
-        asub = ActiveSubspaces(dim=self.red_dim, method='exact')
+        asub = ActiveSubspaces(dim=self.red_dim, method='exact').to(device)
         asub.fit(gradients=grad)
         proj_mat = torch.tensor(asub.evects, dtype=input_type)
 
@@ -123,9 +134,8 @@ class NetAdapter():
         :rtype: nn.Module
         '''
         n_neurons = 20
-        print('d')
         targets = list(train_labels)
-        fnn = FNN(self.red_dim, n_class, n_neurons)
+        fnn = FNN(self.red_dim, n_class, n_neurons).to(device)
         epochs = 500
         training_fnn(fnn, epochs, matrix_red, targets)
 
@@ -218,9 +228,8 @@ class NetAdapter():
         input_type = train_dataset.__getitem__(0)[0].dtype
         possible_cut_idx = PossibleCutIdx(input_network)
         cut_idxlayer = possible_cut_idx[self.cutoff_idx]
-        print('ff')
-        pre_model = input_network[:cut_idxlayer].to(dtype=input_type)
-        post_model = input_network[cut_idxlayer:].to(dtype=input_type)
+        pre_model = input_network[:cut_idxlayer].to(device, dtype=input_type)
+        post_model = input_network[cut_idxlayer:].to(device, dtype=input_type)
         out_model = forward_dataset(input_network, train_loader)
         matrix_red, proj_mat = self._reduce(pre_model, post_model,
                                             train_dataset, train_loader)

@@ -56,7 +56,7 @@ class TestNetAdapter(TestCase):
         assert isinstance(red_net.proj_model, nn.Linear)
         assert isinstance(red_net.inout_map, nn.Sequential)
 
-    def test_reducenet_04(self):
+    def test_reducenet_06(self):
         netadapter = NetAdapter(6, 15, 'POD', 'PCE')
         red_net = netadapter.reduce_net(seq_model, train_dat, tgts, train_load, 1000)
         input_ = torch.arange(1 * 3 * 224 * 224,
