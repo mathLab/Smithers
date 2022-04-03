@@ -18,7 +18,7 @@ class VTKHandler(BaseVTKHandler):
         reader = cls._reader_()
         reader.SetFileName(filename)
         reader.Update()
-        return parse(reader.GetOutput())
+        return cls.parse(reader.GetOutput())
 
     @classmethod
     def parse(cls, data):
