@@ -4,7 +4,6 @@
     .VTU files are VTK files with XML syntax containing vtkUnstructuredGrid.
     Further information related with the file format available at url:
     https://www.vtk.org/VTK/img/file-formats.pdf
-    
 """
 
 from .basevtkhandler import BaseVTKHandler
@@ -19,7 +18,6 @@ class VTUHandler(BaseVTKHandler):
     from vtk import VTK_POLYGON
 
     _data_type_ = vtkUnstructuredGrid
-    _cell_type_ = VTK_POLYGON
 
     _reader_ = vtkXMLUnstructuredGridReader
     _writer_ = vtkXMLUnstructuredGridWriter
@@ -50,18 +48,30 @@ class VTUHandler(BaseVTKHandler):
         return result
 
     @classmethod
-    def write(cls, filename, data):
+    def write(cls, vtuOrg, filename, data):
         """
         Method to save the dataset to `filename`. The dataset `data` should be
         a dictionary containing the requested information. The obtained
         `filename` is a well-formatted VTU file.
 
+        :param vtuOrg : original vtu to specify the cell types
         :param str filename: the name of the file to write.
         :param dict data: the dataset to save.
 
-        .. warning:: all the cells will be stored as VTK_POLYGON.
-            
+        .. note::
+          The cells will be saved with the same format as they were,
+          no need to specify the cell type.
         """
+        #VTK object
+        reader = cls._reader_()
+        reader.SetFileName(vtuOrg)
+        reader.Update()
+        vtkObj = reader.GetOutput()
+
+        #define paramaters needed for setCell
+        CellTypes=vtkObj.GetCellTypesArray()
+        faceLoc=vtkObj.GetFaceLocations()
+        face=vtkObj.GetFaces()
 
         unstructured_grid = cls._data_type_()
 
@@ -76,7 +86,7 @@ class VTUHandler(BaseVTKHandler):
         cls._write_cell_data(unstructured_grid, data)
 
         unstructured_grid.SetPoints(points)
-        unstructured_grid.SetCells(cls._cell_type_, cells)
+        unstructured_grid.SetCells(CellTypes, cells, faceLoc, face)
 
         writer = cls._writer_()
         writer.SetFileName(filename)
