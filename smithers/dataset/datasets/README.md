@@ -44,45 +44,30 @@ For each physical property (key) there is a 2-D array of the shape (500,1639):
 ```python
 type(data.snapshots)
 ```
-Out:
-
-&emsp;&emsp; 
 dict
 
 
 ```python
 len(data.snapshots)
 ```
-Out:
-
-&emsp;&emsp; 
 4
 
 
 ```python
 data.snapshots.keys()
 ```
-Out:
-
-&emsp;&emsp; 
 dict_keys(['vx', 'vy', 'mag(v)', 'p'])
 
 
 ```python
 type(data.snapshots['vx'])
 ```
-Out:
-
-&emsp;&emsp; 
 numpy.ndarray
 
 
 ```python
 data.snapshots['vx'].shape
 ```
-Out:
-
-&emsp;&emsp; 
 (500, 1639)
 
 
@@ -97,18 +82,12 @@ We have only one parameter which is the inlet velocity that corresponds to the 5
 ```python
 type(data.params)
 ```
-Out:
-
-&emsp;&emsp; 
 numpy.ndarray
 
 
 ```python
 data.params.shape
 ```
-Out:
-
-&emsp;&emsp; 
 (500, 1)
 
 
@@ -121,18 +100,12 @@ We can understand from below that this data is the result of a 2-D finite elemen
 ```python
 type(data.pts_coordinates)
 ```
-Out:
-
-&emsp;&emsp; 
 numpy.ndarray
 
 
 ```python
 data.pts_coordinates.shape
 ```
-Out:
-
-&emsp;&emsp; 
 (2, 1639)
 
 
@@ -153,27 +126,18 @@ In this case, thanks to **Smithers**, we can call the triangular grid directly u
 ```python
 type(data.faces)
 ```
-Out:
-
-&emsp;&emsp; 
 numpy.ndarray
 
 
 ```python
 data.faces.shape
 ```
-Out:
-
-&emsp;&emsp; 
 (3091, 3)
 
 
 ```python
 type(data.triang)
 ```
-Out:
-
-&emsp;&emsp; 
 matplotlib.tri.triangulation.Triangulation
 
 
@@ -188,17 +152,15 @@ for name in ['vx', 'vy', 'p', 'mag(v)']:
     
 print('Shape of parameters matrix: {}'.format(data.params.shape))
 ```
-Out:
+Shape of vx      snapshots matrix: (500, 1639)
 
-&emsp;&emsp; Shape of vx      snapshots matrix: (500, 1639)
+Shape of vy      snapshots matrix: (500, 1639)
 
-&emsp;&emsp; Shape of vy      snapshots matrix: (500, 1639)
+Shape of p       snapshots matrix: (500, 1639)
 
-&emsp;&emsp; Shape of p       snapshots matrix: (500, 1639)
+Shape of mag(v)  snapshots matrix: (500, 1639)
 
-&emsp;&emsp; Shape of mag(v)  snapshots matrix: (500, 1639)
-
-&emsp;&emsp; Shape of parameters matrix: (500, 1)
+Shape of parameters matrix: (500, 1)
     
 
 
