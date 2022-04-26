@@ -4,7 +4,6 @@
     .VTU files are VTK files with XML syntax containing vtkUnstructuredGrid.
     Further information related with the file format available at url:
     https://www.vtk.org/VTK/img/file-formats.pdf
-    
 """
 
 from .basevtkhandler import BaseVTKHandler
@@ -16,10 +15,9 @@ class VTUHandler(BaseVTKHandler):
     """
     from vtk import vtkXMLUnstructuredGridReader, vtkXMLUnstructuredGridWriter
     from vtk import vtkUnstructuredGrid
-    from vtk import VTK_POLYGON
+    from vtk import VTK_POLYGON, VTK_TETRA, VTK_HEXAHEDRON, VTK_POLYHEDRON
 
     _data_type_ = vtkUnstructuredGrid
-    _cell_type_ = VTK_POLYGON
 
     _reader_ = vtkXMLUnstructuredGridReader
     _writer_ = vtkXMLUnstructuredGridWriter
@@ -47,6 +45,11 @@ class VTUHandler(BaseVTKHandler):
         result['point_data'] = cls._read_point_data(data)
         result['cell_data'] = cls._read_cell_data(data)
 
+        result['cell_spec']={}
+        result['cell_spec']['cell_types'] = data.GetCellTypesArray()
+        result['cell_spec']['face_loc'] = data.GetFaceLocations()
+        result['cell_spec']['face'] = data.GetFaces()
+
         return result
 
     @classmethod
@@ -59,8 +62,9 @@ class VTUHandler(BaseVTKHandler):
         :param str filename: the name of the file to write.
         :param dict data: the dataset to save.
 
-        .. warning:: all the cells will be stored as VTK_POLYGON.
-            
+        .. note::
+          The cells will be saved with the same format as they were,
+          no need to specify the cell type.
         """
 
         unstructured_grid = cls._data_type_()
@@ -76,7 +80,7 @@ class VTUHandler(BaseVTKHandler):
         cls._write_cell_data(unstructured_grid, data)
 
         unstructured_grid.SetPoints(points)
-        unstructured_grid.SetCells(cls._cell_type_, cells)
+        unstructured_grid.SetCells(data['cell_spec']['cell_types'], cells, data['cell_spec']['face_loc'], data['cell_spec']['face'] )
 
         writer = cls._writer_()
         writer.SetFileName(filename)
