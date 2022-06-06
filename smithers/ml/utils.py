@@ -9,6 +9,24 @@ import torch.nn.functional as F
 import numpy as np
 
 
+def save_checkpoint(epoch, model, optimizer, cut_idx=None):
+    '''
+    Save model checkpoint.
+
+    :param scalar epoch: epoch number
+    :param list model: list of constructed classes that compose our network
+    :param torch.Tensor optimizer: optimizer chosen
+    :return: path to the checkpoint file
+    :rtype: str
+    '''
+    state = {'epoch': epoch, 'model': model, 'optimizer': optimizer}
+    if cut_idx == None:
+        filename = 'checkpoint_ssd300.pth.tar'
+    else:
+        filename = 'checkpoint_VGG16_red_cutID_%d.pth.tar'%(cut_idx)
+    torch.save(state, filename)
+    return filename
+
 
 def get_seq_model(model):
     '''
