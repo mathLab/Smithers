@@ -9,29 +9,55 @@ import torch.optim as optim
 
 
 class FNN(nn.Module):
-    '''
-    Construction of a Feedforward Neural Network (FNN) with
-    given a number of input and output neurons, one hidden
-    layer with a number n_hid of neurons.
 
-    :param int n_input: number of input neurons
-    :param int n_class: number of output neurons that corresponds
-        to the number of classes that compose the dataset.
-    :param int n_hid: number of hidden neurons.
-    '''
-    def __init__(self, n_input, n_class, n_hid, cifar=None):
+    def __init__(self, n_input, n_output, inner_size=20,
+                 n_layers=1, func=nn.Softplus(), layers=None):
+        '''
+        Construction of a Feedforward Neural Network (FNN) with
+        given a number of input and output neurons, one hidden
+        layer with a number n_hid of neurons.
+
+        :param int n_input: number of input neurons
+        :param int n_output: number of output neurons that corresponds
+            to the number of classes that compose the dataset
+        :param int inner_size: number of hidden neurons
+        :param int n_layers: number of hidden layers
+        :param nn.Module func: activation function. Default
+            function: nn.Softplus
+        :param list layers: list where each component represents the
+            number of hidden layers for the corresponding layer
+        :param bool cifar: boolean to identify if we are using as dataset
+            the cifar one
+        '''
         super(FNN, self).__init__()
+
         self.n_input = n_input
-        self.n_class = n_class
-        self.n_hid = n_hid
-        self.fc1 = nn.Linear(self.n_input, self.n_hid)
-        self.fc2 = nn.Linear(self.n_hid, self.n_hid)
-        self.fc3 = nn.Linear(self.n_hid, self.n_hid)
-        self.fc4 = nn.Linear(self.n_hid, self.n_hid)
-        self.fc5 = nn.Linear(self.n_hid, self.n_hid)
-        self.fc6 = nn.Linear(self.n_hid, self.n_hid)
-        self.fc7 = nn.Linear(self.n_hid, self.n_class)
-        self.cifar = cifar
+        self.n_output = n_output
+
+        if layers is None:
+            layers = [inner_size] * n_layers
+
+        tmp_layers = layers.copy()
+        tmp_layers.append(self.n_output_dimension)
+
+        self.layers = []
+        for i in range(len(tmp_layers)-1):
+            self.layers.append(nn.Linear(tmp_layers[i], tmp_layers[i+1]))
+
+        if isinstance(func, list):
+            self.functions = func
+        else:
+            self.functions = [func for _ in range(len(self.layers)-1)]
+
+        unique_list = []
+        for layer, func in zip(self.layers[:-1], self.functions):
+            unique_list.append(layer)
+            if func is not None:
+                unique_list.append(func())
+        unique_list.append(self.layers[-1])
+
+        self.model = nn.Sequential(*unique_list)
+
 
     def forward(self, x):
         '''
@@ -39,21 +65,12 @@ class FNN(nn.Module):
 
         :param tensor x: input of the network with dimensions
             n_images x n_input
-        :return: output of the FNN n_images x n_class
+        :return: output of the FNN n_images x n_output
         :rtype: tensor
         '''
-        if self.cifar is not None:
-            x = x.view(x.size(0), -1)
-#        x = torch.nn.Softplus()(self.fc1(x))
-#        x = torch.nn.Softplus()(self.fc2(x))
-        x = torch.nn.ReLU()(self.fc1(x))
-        x = torch.nn.ReLU()(self.fc2(x))
-        x = torch.nn.ReLU()(self.fc3(x))
-        x = torch.nn.ReLU()(self.fc4(x))
-        x = torch.nn.ReLU()(self.fc5(x))
-        x = torch.nn.ReLU()(self.fc6(x))
-        x = self.fc7(x)
-        return x
+        return self.model(x)
+
+
 
 
 
