@@ -1,10 +1,21 @@
 import Ofpp
 import os
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from operator import itemgetter
 from .openfoamutils import polyarea, project, Parser, read_mesh_file
 
+
+def progress(count, total):
+    bar_len = 100
+    filled_len = int(round(bar_len * count / float(total)))
+
+    percents = round(100.0 * count / float(total), 1)
+    bar = '#' * filled_len + '-' * (bar_len - filled_len)
+
+    sys.stdout.write('[%s] %s%s\r' % (bar, percents, '%'))
+    sys.stdout.flush()
 
 class OpenFoamHandler:
     """
@@ -202,11 +213,12 @@ class OpenFoamHandler:
             else:
                 # we want a list in order to return an iterable object
                 time_instant_subfolders = [sorted(subfolders)[0]]
-            return map(full_path_with_label, time_instant_subfolders)
+            return list(map(full_path_with_label, time_instant_subfolders))
 
         # if `fields_time_instants` is a list of strings, we take only the
         # subfolders whose name exactly matches with the strings in the list.
         elif isinstance(fields_time_instants, list):
+            fields_time_instants = [str(x) for x in fields_time_instants]
             return list(map(full_path_with_label, fields_time_instants))
         else:
             raise ValueError(
@@ -439,15 +451,19 @@ class OpenFoamHandler:
             filename, time_instants
         )
         if time_instants is not None:
-            return dict(
-                (
+            count = 0
+            tmp = dict()
+            print('Snapshot acqusition in progress...')
+            for name, path in time_instants:
+                count += 1
+                progress(count, len(time_instants))
+                tmp = (
                     name,
                     cls._build_time_instant_snapshot(
                         ofpp_mesh, path, field_names, traveling_mesh
                     ),
                 )
-                for name, path in time_instants
-            )
+            return tmp
         else:
             return cls._build_time_instant_snapshot(
                 ofpp_mesh, filename, field_names, traveling_mesh
