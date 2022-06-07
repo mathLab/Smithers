@@ -1,6 +1,5 @@
 import Ofpp
 import os
-import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from operator import itemgetter
@@ -8,14 +7,13 @@ from .openfoamutils import polyarea, project, Parser, read_mesh_file
 
 
 def progress(count, total):
-    bar_len = 100
+    bar_len = 70
     filled_len = int(round(bar_len * count / float(total)))
 
     percents = round(100.0 * count / float(total), 1)
     bar = '#' * filled_len + '-' * (bar_len - filled_len)
 
-    sys.stdout.write('[%s] %s%s\r' % (bar, percents, '%'))
-    sys.stdout.flush()
+    print('\r[%s] %s%s' % (bar, percents, '%'), end = '', flush = True)
 
 class OpenFoamHandler:
     """
@@ -463,9 +461,9 @@ class OpenFoamHandler:
                         ofpp_mesh, path, field_names, traveling_mesh
                     ),
                 )
+            print()
             return tmp
         else:
             return cls._build_time_instant_snapshot(
                 ofpp_mesh, filename, field_names, traveling_mesh
             )
-            
