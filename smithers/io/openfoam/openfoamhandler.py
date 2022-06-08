@@ -1,10 +1,16 @@
 import Ofpp
 import os
 import numpy as np
-import matplotlib.pyplot as plt
-from operator import itemgetter
 from .openfoamutils import polyarea, project, Parser, read_mesh_file
 
+def progress(count, total):
+    bar_len = 70
+    filled_len = int(round(bar_len*count/float(total)))
+
+    percents = round(100.0*count/float(total), 1)
+    bar = '#'*filled_len + '-'*(bar_len - filled_len)
+
+    print('\r[{}] {} {}'.format(bar, percents, '%'), end = '', flush = True)
 
 class OpenFoamHandler:
     """
@@ -202,7 +208,7 @@ class OpenFoamHandler:
             else:
                 # we want a list in order to return an iterable object
                 time_instant_subfolders = [sorted(subfolders)[0]]
-            return map(full_path_with_label, time_instant_subfolders)
+            return list(map(full_path_with_label, time_instant_subfolders))
 
         # if `fields_time_instants` is a list of strings, we take only the
         # subfolders whose name exactly matches with the strings in the list.
@@ -439,15 +445,14 @@ class OpenFoamHandler:
             filename, time_instants
         )
         if time_instants is not None:
-            return dict(
-                (
-                    name,
-                    cls._build_time_instant_snapshot(
-                        ofpp_mesh, path, field_names, traveling_mesh
-                    ),
-                )
-                for name, path in time_instants
-            )
+            out = dict()
+            print('Snapshot acqusition in progress...')
+            for count, (name, path) in enumerate(time_instants, 1):
+                progress(count, len(time_instants))
+                out[name] = cls._build_time_instant_snapshot(
+                    ofpp_mesh, path, field_names, traveling_mesh)
+            print()
+            return out
         else:
             return cls._build_time_instant_snapshot(
                 ofpp_mesh, filename, field_names, traveling_mesh
