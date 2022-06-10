@@ -1,24 +1,20 @@
-from unittest import TestCase
-import unittest
 import numpy as np
-import filecmp
-import os
 
 from smithers.io import VTKHandler
 
-vtk_file = "tests/test_datasets/cube.vtk"
+poly_file = "tests/test_datasets/cube.vtk"
+ugrid_file = "tests/test_datasets/cube_grid.vtk"
 
 
-def test_points():
-    data = VTKHandler.read(vtk_file)
+def test_polydata():
+    data = VTKHandler.read(poly_file)
     np.testing.assert_array_almost_equal(data["points"][0], [-0.5] * 3)
-
-
-def test_number_points():
-    data = VTKHandler.read(vtk_file)
     np.testing.assert_equal(data["points"].shape, (24, 3))
-
-
-def test_cellss():
-    data = VTKHandler.read(vtk_file)
     np.testing.assert_equal(data["cells"][5], [20, 21, 23, 22])
+
+
+def test_grid():
+    data = VTKHandler.read(ugrid_file, format='unstructured')
+    np.testing.assert_array_almost_equal(data["points"][-1], [10] * 3)
+    np.testing.assert_array_almost_equal(data["points"][0], [0] * 3)
+    np.testing.assert_equal(data["cells"][5], [5, 6, 17, 16, 126, 127, 138, 137])

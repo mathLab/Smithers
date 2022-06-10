@@ -1,8 +1,14 @@
 from .vtkhandler import VTKHandler
 
+
 class VTPHandler(VTKHandler):
 
-    from vtk import vtkXMLPolyDataReader, vtkXMLPolyDataWriter
+    cls_format = 'xml_polydata'
 
-    _reader_ = vtkXMLPolyDataReader
-    _writer_ = vtkXMLPolyDataWriter
+    @classmethod
+    def read(cls, filename):
+        return super().read(filename, format=cls.cls_format)
+
+    @classmethod
+    def write(cls, filename, data):
+        super().write(filename, data, format=cls.cls_format)

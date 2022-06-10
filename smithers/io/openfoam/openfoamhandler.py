@@ -2,7 +2,8 @@ import os
 import numpy as np
 from .openfoamutils import polyarea, project, Parser, read_mesh_file
 from .mesh_parser import FoamMesh
-from .field_parser import parse_internal_field, parse_boundary_field, parse_field_all
+from .field_parser import (parse_internal_field, parse_boundary_field)
+
 
 def progress(count, total):
     bar_len = 70
@@ -11,7 +12,8 @@ def progress(count, total):
     percents = round(100.0*count/float(total), 1)
     bar = '#'*filled_len + '-'*(bar_len - filled_len)
 
-    print('\r[{}] {} {}'.format(bar, percents, '%'), end = '', flush = True)
+    print('\r[{}] {} {}'.format(bar, percents, '%'), end='', flush=True)
+
 
 class OpenFoamHandler:
     """
@@ -28,10 +30,12 @@ class OpenFoamHandler:
 
         normal = None
 
-        first_index = 0
-        while first_index + 3 <= points.shape[0]:
-            triangle = points[first_index+1:first_index+3] - points[first_index]
-            first_index += 1
+        # first_index = 0
+        # while first_index + 3 <= points.shape[0]:
+        #     print(first_index, points.shape[0])
+
+        for idx in range(points.shape[0] - 3):
+            triangle = points[idx+1:idx+3] - points[idx]
 
             n = np.cross(triangle[0], triangle[1])
             if normal is None:
@@ -47,8 +51,8 @@ class OpenFoamHandler:
 
         :param points: An array of the points which compose the mesh.
         :type mesh: np.ndarray
-        :param points: Faces which compose the whole mesh, represented by a list
-            of lists of point indexes.
+        :param points: Faces which compose the whole mesh, represented by a
+            list of lists of point indexes.
         :type mesh: np.ndarray
         :param boundary_data: A dict of data which represents the boundary.
         :type boundary_dict: dict
@@ -56,8 +60,10 @@ class OpenFoamHandler:
             `'type'`. The value corresponding to the key `'faces'` is a
             dictionary which contains the following keys:
 
-            * `'faces_indexes'`: The indexes of the faces which compose this boundary;
-            * `'normals'`: The normalized vector normal to each face. The direction is taken according to the right-hand rule.
+            * `'faces_indexes'`: The indexes of the faces which compose this
+                boundary;
+            * `'normals'`: The normalized vector normal to each face. The
+                direction is taken according to the right-hand rule.
         :rtype: dict
         """
         # extract the indexes of the faces which compose the boundary
@@ -86,8 +92,9 @@ class OpenFoamHandler:
         first_three_points_indexes = np.concatenate(
             [faces[idx][:3] for idx in bd_faces_indexes]
         )
-        # the second index is the index of the point, the third is the cartesian
-        # index, the first index is the index of the face
+
+        # the second index is the index of the point, the third is the
+        # cartesian index, the first index is the index of the face
         first_three_points = np.reshape(
             (points[first_three_points_indexes]), (-1, 3, 3)
         )
@@ -120,9 +127,9 @@ class OpenFoamHandler:
         # points per face may not be unique
         area = [
             polyarea(*project(points[point_idxes], versors).T)
-            # for each face we have a matrix of two rows, which contain a couple
-            # of orthogonal normalized vectors which lie on the corresponding
-            # face
+            # for each face we have a matrix of two rows, which contain a
+            # couple of orthogonal normalized vectors which lie on the
+            # corresponding face
             for point_idxes, versors in zip(
                 map(faces.__getitem__, bd_faces_indexes), lying_versors
             )
@@ -163,15 +170,17 @@ class OpenFoamHandler:
 
     @classmethod
     def _find_time_instants_subfolders(cls, path, fields_time_instants):
-        """Finds all the time instants in the subfolders of `path` (at the moment
-        this is only used to find the time evolution of fields).
+        """Finds all the time instants in the subfolders of `path` (at the
+        moment this is only used to find the time evolution of fields).
 
         :param path: The base folder for the mesh.
         :type path: str
         :param fields_time_instants: One of:
 
-        * `'all_numeric'`: select all the subfolders of `path` whose name can be converted to float);
-        * `'first'`: same of `'all_numeric'`, but return only the folder whose name is the smallest number of the set;
+        * `'all_numeric'`: select all the subfolders of `path` whose name can
+            be converted to float);
+        * `'first'`: same of `'all_numeric'`, but return only the folder whose
+            name is the smallest number of the set;
         * `'not_first'`: same of `'all_numeric'`, but exclude the first folder;
         * a list of folder names.
         :type fields_time_instants: str or list
@@ -179,7 +188,8 @@ class OpenFoamHandler:
             subfolder full path).
         :rtype: list
         """
-        full_path_with_label = lambda name: (name, os.path.join(path, name))
+        def full_path_with_label(name):
+            return (name, os.path.join(path, name))
 
         def is_numeric(x):
             try:
@@ -188,9 +198,9 @@ class OpenFoamHandler:
             except ValueError:
                 return False
 
-        # if `fields_time_instants` is 'all_numeric', we load all the subfolders
-        # of `path` whose name we can cast to a float. if 'first', we take only
-        # the first one of those subfolders.
+        # if `fields_time_instants` is 'all_numeric', we load all the
+        # subfolders of `path` whose name we can cast to a float. if 'first',
+        # we take only the first one of those subfolders.
         if (
             fields_time_instants == "all_numeric"
             or fields_time_instants == "first"
@@ -234,10 +244,8 @@ class OpenFoamHandler:
             subfolder full path).
         :rtype: list
         """
-        full_path_with_name = lambda name: (
-            name,
-            os.path.join(fields_root_path, name),
-        )
+        def full_path_with_name(name):
+            return (name, os.path.join(fields_root_path, name))
 
         if field_names == "all":
             return map(full_path_with_name, next(os.walk(fields_root_path))[2])
@@ -343,9 +351,8 @@ class OpenFoamHandler:
             )
             if points is None:
                 print(
-                    "'points' not found at t={}, using the initial value.".format(
-                        time_instant_path
-                    )
+                    "'points' not found at t={}, "
+                    "using the initial value.".format(time_instant_path)
                 )
                 points = mesh.points
 
@@ -356,9 +363,8 @@ class OpenFoamHandler:
             )
             if faces is None:
                 print(
-                    "'faces' not found at t={}, using the initial value.".format(
-                        time_instant_path
-                    )
+                    "'faces' not found at t={}, "
+                    "using the initial value.".format(time_instant_path)
                 )
                 faces = mesh.faces
 
@@ -369,9 +375,8 @@ class OpenFoamHandler:
             )
             if boundary_data is None:
                 print(
-                    "'boundary' not found at t={}, using the initial value.".format(
-                        time_instant_path
-                    )
+                    "'boundary' not found at t={}, "
+                    "using the initial value.".format(time_instant_path)
                 )
                 boundary_data = mesh.boundary
 
@@ -382,9 +387,8 @@ class OpenFoamHandler:
             )
             if owner_data is None:
                 print(
-                    "'owner' not found at t={}, using the initial value.".format(
-                        time_instant_path
-                    )
+                    "'owner' not found at t={}, "
+                    "using the initial value.".format(time_instant_path)
                 )
                 owner_data = mesh.owner
 
@@ -462,7 +466,6 @@ class OpenFoamHandler:
     @classmethod
     def write_points(cls, mesh_points, filename, input_filename):
 
-        n_points = mesh_points.shape[0]
         with open(filename, 'w') as output_file:
             for elem in cls._load_file_header(input_filename):
                 output_file.write(elem)
