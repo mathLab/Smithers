@@ -1,31 +1,49 @@
 from .basevtkhandler import BaseVTKHandler
 
+
 class VTKHandler(BaseVTKHandler):
     """
     Handler for .VTK files.
     """
+    from vtk import vtkPolyData, vtkUnstructuredGrid
     from vtk import vtkPolyDataReader, vtkPolyDataWriter
     from vtk import vtkUnstructuredGridReader, vtkUnstructuredGridWriter
-    from vtk import vtkPolyData, vtkUnstructuredGrid
+    from vtk import vtkXMLPolyDataReader, vtkXMLPolyDataWriter
 
-    _data_type_ = vtkPolyData
+    vtk_format = {
+        'polydata': {'writer': vtkPolyDataWriter,
+                     'reader': vtkPolyDataReader,
+                     'type':   vtkPolyData},
 
-    _reader_ = vtkUnstructuredGridReader
-    _writer_ = vtkUnstructuredGridWriter
+        'unstructured': {'writer': vtkUnstructuredGridWriter,
+                         'reader': vtkUnstructuredGridReader,
+                         'type':   vtkUnstructuredGrid},
+
+        'xml_polydata': {'writer': vtkXMLPolyDataWriter,
+                         'reader': vtkXMLPolyDataReader,
+                         'type':   vtkPolyData},
+    }
 
     @classmethod
-    def read(cls, filename):
-        reader = cls._reader_()
+    def read(cls, filename, format='polydata'):
+
+        if format not in cls.vtk_format.keys():
+            raise ValueError('`format` is invalid')
+
+        reader = cls.vtk_format[format]['reader']()
         reader.SetFileName(filename)
         reader.Update()
-        return cls.parse(reader.GetOutput())
+        data_dict = cls.vtk2dict(reader.GetOutput())
+        # data_dict['format'] = format # TODO: format attribute?
+        return data_dict
 
     @classmethod
-    def parse(cls, data):
+    def vtk2dict(cls, data):
         result = {'cells': [], 'points': None}
 
         for id_cell in range(data.GetNumberOfCells()):
             cell = data.GetCell(id_cell)
+            print(cell)
             result['cells'].append([
                 cell.GetPointId(id_point)
                 for id_point in range(cell.GetNumberOfPoints())
@@ -39,28 +57,34 @@ class VTKHandler(BaseVTKHandler):
         return result
 
     @classmethod
-    def write(cls, filename, data):
+    def dict2vtk(cls, data, format):
         """ TODO """
 
-        from vtk import vtkPolyData, vtkPoints, vtkCellArray
-        from vtk.util.numpy_support import numpy_to_vtk
+        vtkdata = cls.vtk_format[format]['type']()
 
-        polydata = vtkPolyData()
+        vtk_points = cls._points_()
+        vtk_points.SetData(cls._numpy_to_vtk_(data['points']))
 
-        vtk_points = vtkPoints()
-        vtk_points.SetData(numpy_to_vtk(data['points']))
-
-        vtk_cells = vtkCellArray()
+        vtk_cells = cls._cells_()
         for cell in data['cells']:
             vtk_cells.InsertNextCell(len(cell), cell)
 
-        cls._write_point_data(polydata, data)
-        cls._write_cell_data(polydata, data)
+        cls._write_point_data(vtkdata, data)
+        cls._write_cell_data(vtkdata, data)
 
-        polydata.SetPoints(vtk_points)
-        polydata.SetPolys(vtk_cells)
+        vtkdata.SetPoints(vtk_points)
+        vtkdata.SetPolys(vtk_cells)
 
-        writer = cls._writer_()
+        return vtkdata
+
+    @classmethod
+    def write(cls, filename, data, format='polydata'):
+
+        if format not in cls.vtk_format.keys():
+            raise ValueError('`format` is invalid')
+
+        vtkdata = cls.dict2vtk(data, format)
+        writer = cls.vtk_format[format]['writer']()
         writer.SetFileName(filename)
-        writer.SetInputData(polydata)
+        writer.SetInputData(vtkdata)
         writer.Write()

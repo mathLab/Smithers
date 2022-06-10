@@ -1,9 +1,4 @@
-from unittest import TestCase
-import unittest
 import numpy as np
-import filecmp
-import os
-
 from smithers.io import VTPHandler as Handler
 
 test_file = "tests/test_datasets/cube.vtp"
@@ -28,3 +23,5 @@ def test_write():
     data = Handler.read(test_file)
     data["points"] += 1.0
     Handler.write("test.vtp", data)
+    new = Handler.read('test.vtp')
+    np.testing.assert_array_almost_equal(data["points"], new['points'])

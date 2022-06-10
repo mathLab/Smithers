@@ -159,4 +159,4 @@ def test_normal():
     nrm = OpenFoamHandler._normal(pts)
     dots = np.dot(vecs, nrm)
 
-    np.testing.assert_allclose(dots[dots != 0], 0, atol=1e-4)
+    np.testing.assert_allclose(dots[dots != 0], 0, atol=1e-3, rtol=0)
