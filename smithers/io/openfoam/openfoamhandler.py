@@ -1,7 +1,8 @@
-import Ofpp
 import os
 import numpy as np
 from .openfoamutils import polyarea, project, Parser, read_mesh_file
+from .mesh_parser import FoamMesh
+from .field_parser import parse_internal_field, parse_boundary_field, parse_field_all
 
 def progress(count, total):
     bar_len = 70
@@ -141,7 +142,7 @@ class OpenFoamHandler:
     def _build_cells(cls, mesh, cell_idx):
         """Extract information about a cell.
 
-        :param mesh: An Ofpp OpenFOAM mesh.
+        :param mesh: An OpenFOAM mesh.
         :type mesh: Ofpp.mesh_parser.FoamMesh
         :param cell_idx: The index of the cell in the list `mesh.cell_faces`.
         :type cell_idx: int
@@ -255,7 +256,7 @@ class OpenFoamHandler:
         :rtype: list
         """
         try:
-            return Ofpp.parse_boundary_field(path)
+            return parse_boundary_field(path)
         except IndexError:
             return None
 
@@ -269,7 +270,7 @@ class OpenFoamHandler:
         :rtype: list
         """
         try:
-            return Ofpp.parse_internal_field(path)
+            return parse_internal_field(path)
         except IndexError:
             return None
 
@@ -313,7 +314,7 @@ class OpenFoamHandler:
             path.
 
         :param mesh: An Ofpp OpenFOAM mesh.
-        :type mesh: Ofpp.mesh_parser.FoamMesh
+        :type mesh: .mesh_parser.FoamMesh
         :param time_instant_path: The base folder of the time instant.
         :type time_instant_path: str
         :param field_names: Refer to the documentation of the parameter
@@ -439,7 +440,7 @@ class OpenFoamHandler:
         :rtype: dict
         """
 
-        ofpp_mesh = Ofpp.FoamMesh(filename)
+        ofpp_mesh = FoamMesh(filename)
 
         time_instants = cls._find_time_instants_subfolders(
             filename, time_instants
@@ -457,3 +458,18 @@ class OpenFoamHandler:
             return cls._build_time_instant_snapshot(
                 ofpp_mesh, filename, field_names, traveling_mesh
             )
+
+    @classmethod
+    def write_points(cls, mesh_points, filename, input_filename):
+
+        n_points = mesh_points.shape[0]
+        with open(filename, 'w') as output_file:
+            for elem in cls._load_file_header(input_filename):
+                output_file.write(elem)
+            output_file.write('(\n')
+            for row, point in enumerate(mesh_points):
+                output_file.write('(' + str(mesh_points[row][0]) + ' '
+                                  + str(mesh_points[row][1]) + ' '
+                                  + str(mesh_points[row][2]) + ')\n')
+            output_file.write(')\n')
+            output_file.write(cls._load_file_end(input_filename))

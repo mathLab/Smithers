@@ -1,6 +1,6 @@
 import numpy as np
 from enum import Enum, auto
-from Ofpp.mesh_parser import FoamMesh
+from .mesh_parser import FoamMesh
 
 
 def polyarea(x, y):
