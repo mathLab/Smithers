@@ -1,14 +1,13 @@
 from unittest import TestCase
 import unittest
 import numpy as np
-import Ofpp
-from smithers.io.openfoam import OpenFoamHandler
+from smithers.io.openfoam import OpenFoamHandler, FoamMesh
 
 openfoam_mesh_path = "tests/test_datasets/openfoam_mesh"
 notime_openfoam_mesh_path = "tests/test_datasets/notime_openfoam_mesh"
 handler = OpenFoamHandler()
 mesh = handler.read(openfoam_mesh_path)
-truth_mesh = Ofpp.FoamMesh(openfoam_mesh_path)
+truth_mesh = FoamMesh(openfoam_mesh_path)
 
 
 def test_read():
