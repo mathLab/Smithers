@@ -212,7 +212,6 @@ class FoamMesh(object):
         #         data = vv.reshape((num, 3))
 
 
-
     @classmethod
     def parse_owner_neighbour_content(cls, content, is_binary, skip=10):
         """
