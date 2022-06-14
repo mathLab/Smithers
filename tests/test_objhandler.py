@@ -40,8 +40,8 @@ def test_write():
     ]
     x.polygons = [[0, 1, 2], [2, 1, 0]]
 
-    save_obj(x, "/var/tmp/data.obj")
-    assert cmp("/var/tmp/data.obj", "tests/test_datasets/file.obj")
+    save_obj(x, "data.obj")
+    assert cmp("data.obj", "tests/test_datasets/file.obj")
 
 def test_boundary():
     x = WavefrontOBJ()
