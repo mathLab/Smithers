@@ -187,22 +187,30 @@ class FoamMesh(object):
         :param skip: skip lines
         :return: points coordinates as numpy.array
         """
-        n = skip
-        while n < len(content):
-            lc = content[n]
-            if is_integer(lc):
-                num = int(lc)
-                if not is_binary:
-                    data = np.array([ln[1:-2].split() for ln in content[n + 2:n + 2 + num]], dtype=float)
-                else:
-                    buf = b''.join(content[n+1:])
-                    disp = struct.calcsize('c')
-                    vv = np.array(struct.unpack('{}d'.format(num*3),
-                                                buf[disp:num*3*struct.calcsize('d') + disp]))
-                    data = vv.reshape((num, 3))
-                return data
-            n += 1
-        return None
+        def parse_line(line):
+            return line.decode('utf-8').strip().replace(')', '').replace('(', '').split()
+
+        for idx, row in enumerate(content):
+            try:
+                num_points = int(row)
+                start_idx = idx+2
+                break
+            except ValueError:
+                pass
+
+        string_coords = content[start_idx:start_idx+num_points]
+
+        data = np.array(list(map(parse_line, string_coords)), dtype=float)
+        return data
+
+        #TODO binary
+        #     if is_binary:
+        #         buf = b''.join(content[n+1:])
+        #         disp = struct.calcsize('c')
+        #         vv = np.array(struct.unpack('{}d'.format(num*3),
+        #                                     buf[disp:num*3*struct.calcsize('d') + disp]))
+        #         data = vv.reshape((num, 3))
+
 
 
     @classmethod

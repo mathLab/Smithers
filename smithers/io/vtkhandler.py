@@ -25,12 +25,12 @@ class VTKHandler(BaseVTKHandler):
     }
 
     @classmethod
-    def read(cls, filename, format='polydata'):
+    def read(cls, filename, fmt='polydata'):
 
-        if format not in cls.vtk_format.keys():
-            raise ValueError('`format` is invalid')
+        if fmt not in cls.vtk_format.keys():
+            raise ValueError('`fmt` is invalid')
 
-        reader = cls.vtk_format[format]['reader']()
+        reader = cls.vtk_format[fmt]['reader']()
         reader.SetFileName(filename)
         reader.Update()
         data_dict = cls.vtk2dict(reader.GetOutput())
@@ -57,10 +57,10 @@ class VTKHandler(BaseVTKHandler):
         return result
 
     @classmethod
-    def dict2vtk(cls, data, format):
+    def dict2vtk(cls, data, fmt):
         """ TODO """
 
-        vtkdata = cls.vtk_format[format]['type']()
+        vtkdata = cls.vtk_format[fmt]['type']()
 
         vtk_points = cls._points_()
         vtk_points.SetData(cls._numpy_to_vtk_(data['points']))
@@ -78,13 +78,13 @@ class VTKHandler(BaseVTKHandler):
         return vtkdata
 
     @classmethod
-    def write(cls, filename, data, format='polydata'):
+    def write(cls, filename, data, fmt='polydata'):
 
-        if format not in cls.vtk_format.keys():
-            raise ValueError('`format` is invalid')
+        if fmt not in cls.vtk_format.keys():
+            raise ValueError('`fmt` is invalid')
 
-        vtkdata = cls.dict2vtk(data, format)
-        writer = cls.vtk_format[format]['writer']()
+        vtkdata = cls.dict2vtk(data, fmt)
+        writer = cls.vtk_format[fmt]['writer']()
         writer.SetFileName(filename)
         writer.SetInputData(vtkdata)
         writer.Write()

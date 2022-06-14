@@ -7,8 +7,8 @@ class VTPHandler(VTKHandler):
 
     @classmethod
     def read(cls, filename):
-        return super().read(filename, format=cls.cls_format)
+        return super().read(filename, fmt=cls.cls_format)
 
     @classmethod
     def write(cls, filename, data):
-        super().write(filename, data, format=cls.cls_format)
+        super().write(filename, data, fmt=cls.cls_format)

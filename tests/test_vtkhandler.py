@@ -14,7 +14,7 @@ def test_polydata():
 
 
 def test_grid():
-    data = VTKHandler.read(ugrid_file, format='unstructured')
+    data = VTKHandler.read(ugrid_file, fmt='unstructured')
     np.testing.assert_array_almost_equal(data["points"][-1], [10] * 3)
     np.testing.assert_array_almost_equal(data["points"][0], [0] * 3)
     np.testing.assert_equal(data["cells"][5], [5, 6, 17, 16, 126, 127, 138, 137])
