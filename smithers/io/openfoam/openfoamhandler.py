@@ -457,11 +457,25 @@ class OpenFoamHandler:
                 out[name] = cls._build_time_instant_snapshot(
                     ofpp_mesh, path, field_names, traveling_mesh)
             print()
-            return out
+
+    @classmethod
+    def _load_file_header(cls, filename):
+        with open(filename, 'r') as input_file:
+            all_file = input_file.readlines()
+            header = all_file[:all_file.index('(\n')]
+        return header
+
+    @classmethod
+    def _load_file_end(cls, filename):
+        with open(filename, 'r') as input_file:
+            all_file = input_file.readlines()
+            endline = all_file[-1]
+        return endline        return out
         else:
             return cls._build_time_instant_snapshot(
                 ofpp_mesh, filename, field_names, traveling_mesh
             )
+
 
     @classmethod
     def write_points(cls, mesh_points, filename, input_filename):
