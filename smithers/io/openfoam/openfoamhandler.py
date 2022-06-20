@@ -464,6 +464,21 @@ class OpenFoamHandler:
             )
 
     @classmethod
+    def _load_file_header(cls, filename):
+        with open(filename, 'r') as input_file:
+            all_file = input_file.readlines()
+            header = all_file[:all_file.index('(\n')]
+        return header
+
+    @classmethod
+    def _load_file_end(cls, filename):
+        with open(filename, 'r') as input_file:
+            all_file = input_file.readlines()
+            endline = all_file[-1]
+        return endline
+
+
+    @classmethod
     def write_points(cls, mesh_points, filename, input_filename):
 
         with open(filename, 'w') as output_file:
