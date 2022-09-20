@@ -43,7 +43,6 @@ class VTKHandler(BaseVTKHandler):
 
         for id_cell in range(data.GetNumberOfCells()):
             cell = data.GetCell(id_cell)
-            print(cell)
             result['cells'].append([
                 cell.GetPointId(id_point)
                 for id_point in range(cell.GetNumberOfPoints())
