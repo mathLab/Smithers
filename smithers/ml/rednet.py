@@ -5,6 +5,12 @@ by the premodel, the reduction layer and the final input-output map.
 import copy
 import torch
 import torch.nn as nn
+from smithers.ml.tensor_product_layer import tensor_product_layer
+
+if torch.cuda.is_available(): #MODIF tutto il pezzo
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
 
 class RedNet(nn.Module):
     '''
@@ -35,6 +41,8 @@ class RedNet(nn.Module):
             self.premodel = premodel
             if isinstance(proj_mat, nn.Linear):
                 self.proj_model = proj_mat
+            elif isinstance(proj_mat, tensor_product_layer): #Aggiunto per AHOSVD
+                self.proj_model = proj_mat
             else:
                 self.proj_model = nn.Linear(proj_mat.size()[0],
                                             proj_mat.size()[1], bias=False)
@@ -51,16 +59,27 @@ class RedNet(nn.Module):
 
     def forward(self, x):
         '''
-        Forward Phase.
+        Forward Phase. The first clause concerns AHOSVD, the other one is a more general version.
 
         :param torch.tensor x: input for the reduced net with dimensions
             n_images x n_input.
         :return: output n_images x n_class
         :rtype: torch.tensor
         '''
-        x = self.premodel(x)
-        x = x.view(x.size(0), -1)
-        x = self.proj_model(x)
-        x = self.inout_map(x)
+        if isinstance(self.proj_model, tensor_product_layer):
+            x = x.to(device)
+            x = self.premodel(x)
+            x = self.proj_model(x)
+            if len(self.proj_model.list_of_matrices) == len(x.shape):
+                x = x.flatten()
+            elif len(x.shape) == len(self.proj_model.list_of_matrices) + 1:
+                x = x.reshape(x.shape[0], int(torch.prod(torch.tensor(x.shape[1:]))))
+            x = self.inout_map(x)
+        else:    
+            x = x.to(device)
+            x = self.premodel(x)
+            x = x.view(x.size(0), -1)
+            x = self.proj_model(x)
+            x = self.inout_map(x)
 
         return x

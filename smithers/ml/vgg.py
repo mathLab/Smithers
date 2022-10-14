@@ -4,8 +4,13 @@ Module focused on the implementation of VGG.
 import torch
 import torch.nn as nn
 import torchvision
+from smithers.ml.utils import save_checkpoint
 
 from smithers.ml.utils import decimate
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
 
 
 class VGG(nn.Module):
@@ -218,7 +223,7 @@ class VGG(nn.Module):
             pretrained_net = torchvision.models.vgg16(pretrained=True)
         else:
             pretrained_net = torch.load(self.pretrain_weights,
-                                        torch.device('cpu'))
+                                        torch.device(device))
            # pretrained_net = pretrained_net['model']
         pretrained_state_dict = pretrained_net.state_dict()
         pretrained_param_names = list(pretrained_state_dict.keys())
