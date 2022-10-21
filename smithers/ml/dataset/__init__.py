@@ -6,6 +6,6 @@ __title__ = 'object_detector'
 __author__ = 'Laura Meneghetti, Nicola Demo'
 __maintainer__ = __author__
 
-from dataset.create_json import *
-from dataset.imagerec_dataset import Imagerec_Dataset
-from dataset.pascalvoc_dataset import PascalVOCDataset
+#from smithers.ml.dataset.create_json import *
+from smithers.ml.dataset.imagerec_dataset import Imagerec_Dataset
+from smithers.ml.dataset.pascalvoc_dataset import PascalVOCDataset

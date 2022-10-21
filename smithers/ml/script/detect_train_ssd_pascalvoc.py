@@ -10,12 +10,12 @@ import matplotlib.pyplot as plt
 import os
 import torchvision.transforms as transforms
 
-from .vgg import VGG
-from models.aux_conv import AuxiliaryConvolutions
-from models.predictor import PredictionConvolutions
-from dataset.pascalvoc_dataset import PascalVOCDataset
-from models.detector import Detector
-from models.utils import create_prior_boxes
+from smithers.ml.vgg import VGG
+from smithers.ml.models.aux_conv import AuxiliaryConvolutions
+from smithers.ml.models.predictor import PredictionConvolutions
+from smithers.ml.dataset.pascalvoc_dataset import PascalVOCDataset
+from smithers.ml.models.detector import Detector
+from smithers.ml.models.utils import create_prior_boxes
 
 # Learning parameters
 batch_size = 8  # batch size

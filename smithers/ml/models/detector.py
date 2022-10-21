@@ -11,8 +11,8 @@ from torchvision import transforms
 from tqdm import tqdm
 from PIL import ImageDraw, ImageFont
 
-from object_detector import MultiBoxLoss
-from object_detector.utils import AverageMeter, clip_gradient,\
+from smithers.ml.models.multibox_loss import MultiBoxLoss
+from smithers.ml.models.utils import AverageMeter, clip_gradient,\
      adjust_learning_rate, save_checkpoint, detect_objects, calculate_mAP
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

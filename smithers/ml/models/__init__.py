@@ -6,9 +6,9 @@ __title__ = 'object_detector'
 __author__ = 'Laura Meneghetti, Nicola Demo'
 __maintainer__ = __author__
 
-from models.vgg import VGG
-from models.aux_conv import AuxiliaryConvolutions
-from models.predictor import PredictionConvolutions
-from models.multibox_loss import MultiBoxLoss
-from models.detector import Detector
-from models.utils import *
+from smithers.ml.vgg import VGG
+from smithers.ml.models.aux_conv import AuxiliaryConvolutions
+from smithers.ml.models.predictor import PredictionConvolutions
+from smithers.ml.models.multibox_loss import MultiBoxLoss
+from smithers.ml.models.detector import Detector
+from smithers.ml.models.utils import *

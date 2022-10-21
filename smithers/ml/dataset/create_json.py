@@ -9,9 +9,7 @@ import os
 parser = argparse.ArgumentParser()
 parser.add_argument("voc07_path", help="Path to VOC2007 folder", type=str)
 parser.add_argument("voc12_path", help="Path to VOC2012 folder")
-parser.add_argument("output_folder",
-                    help="Path to JSON output folder",
-                    type=str)
+parser.add_argument("output_folder", help="Path to JSON output folder", type=str)
 args = parser.parse_args()
 
 voc07_path = args.voc07_path
@@ -22,12 +20,12 @@ output_folder = args.output_folder
 # NOTE: The labels have to be written using lower case, since in the function
 # parse_annotation the label is transformed in the lower_case mode in order to
 # avoid problems if in the labeling phase a label was written in a wrong way.
-labels_list = ('aeroplane', 'bicycle', 'bird', 'boat',
+"""labels_list = ('aeroplane', 'bicycle', 'bird', 'boat',
         'bottle', 'bus', 'car', 'cat', 'chair',
         'cow', 'diningtable', 'dog', 'horse',
         'motorbike', 'person', 'pottedplant',
-        'sheep', 'sofa', 'train', 'tvmonitor')
-#labels_list = ('cat', 'dog')
+        'sheep', 'sofa', 'train', 'tvmonitor')"""
+labels_list = ('cat', 'dog')
 label_map = {k: v + 1 for v, k in enumerate(labels_list)}
 label_map['background'] = 0
 rev_label_map = {v: k for k, v in label_map.items()}  # Inverse mapping
@@ -85,7 +83,8 @@ def create_data_lists(voc07_path, voc12_path, out_folder):
     # Training data
     for path in [voc07_path, voc12_path]:
         print(path)
-        if path is not None:
+        #if path != '/u/s/szanin/Smithers/smithers/ml/tutorials/None':
+        if not path.endswith('/None'):# != '/u/s/szanin/Smithers/smithers/ml/tutorials/None':
             # Find IDs of images in training data
             with open(os.path.join(path, 'ImageSets/Main/trainval.txt')) as f:
                 ids = f.read().splitlines()
@@ -102,11 +101,11 @@ def create_data_lists(voc07_path, voc12_path, out_folder):
     assert len(train_objects) == len(train_images)
 
     # Save to file
-    with open(os.path.join(out_folder, 'TRAIN_images.json'), 'w') as j:
+    with open(os.path.join(out_folder, 'TRAIN_images_cd.json'), 'w') as j:
         json.dump(train_images, j)
-    with open(os.path.join(out_folder, 'TRAIN_objects.json'), 'w') as j:
+    with open(os.path.join(out_folder, 'TRAIN_objects_cd.json'), 'w') as j:
         json.dump(train_objects, j)
-    with open(os.path.join(out_folder, 'label_map.json'), 'w') as j:
+    with open(os.path.join(out_folder, 'label_map_cd.json'), 'w') as j:
         json.dump(label_map, j)  # save label map too
 
     print(
@@ -137,9 +136,9 @@ def create_data_lists(voc07_path, voc12_path, out_folder):
     assert len(test_objects) == len(test_images)
 
     # Save to file
-    with open(os.path.join(out_folder, 'TEST_images.json'), 'w') as j:
+    with open(os.path.join(out_folder, 'TEST_images_cd.json'), 'w') as j:
         json.dump(test_images, j)
-    with open(os.path.join(out_folder, 'TEST_objects.json'), 'w') as j:
+    with open(os.path.join(out_folder, 'TEST_objects_cd.json'), 'w') as j:
         json.dump(test_objects, j)
 
     print(

@@ -72,8 +72,8 @@ def sample_dataset(src_dataset, dst_dataset):
     os.mkdir(dst_dataset)
 
 #    ids = select_indeces(['bottle'], 260, os.path.join(src_dataset, 'Annotations'))
-    ids = select_indeces(['cow'], #['dog', 'cat'],
-                         120,
+    ids = select_indeces( ['dog', 'cat'], #['cow'],
+                         300,
                          os.path.join(src_dataset, 'Annotations'))
 
     copy_imgs(ids, src_dataset, dst_dataset)
@@ -83,4 +83,4 @@ def sample_dataset(src_dataset, dst_dataset):
 
 if __name__ == '__main__':
 
-    sample_dataset('../VOCdevkit/VOC2007', 'VOC_cow')
+    sample_dataset('../VOCdevkit/VOC2007', 'VOC_dog_cat')
