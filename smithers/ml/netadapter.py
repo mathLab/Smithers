@@ -4,6 +4,7 @@ training and testing phases.
 '''
 
 import torch
+import torch.nn as nn
 import numpy as np
 
 from smithers.ml.rednet import RedNet
@@ -13,6 +14,7 @@ from smithers.ml.utils import PossibleCutIdx, spatial_gradients, forward_dataset
 from smithers.ml.utils import randomized_svd
 from smithers.ml.AHOSVD import AHOSVD
 from smithers.ml.pcemodel import PCEModel
+
 #from ATHENA.athena.active import ActiveSubspaces
 
 if torch.cuda.is_available():
@@ -184,6 +186,7 @@ class NetAdapter():
         :rtype: nn.Module
         '''
         n_neurons = 20
+        print(f'train lables è di tipo {type(train_labels)}\nEsplicitamente, {train_labels}') #MODIF
         targets = list(train_labels)
         fnn = FNN(self.red_dim, n_class, n_neurons).to(device)
         epochs = 500
@@ -243,11 +246,14 @@ class NetAdapter():
         '''
         if self.inout_method == 'FNN':
             #code for FNN
-            inout_map = self._inout_mapping_FNN(matrix_red, train_labels, n_class)
+            inout_map = self._inout_mapping_FNN(matrix_red, train_labels, n_class) 
 
         elif self.inout_method == 'PCE':
             #code for PCE
             inout_map = self._inout_mapping_PCE(matrix_red, out_model, train_loader, train_labels)
+        
+        elif self.inout_method == 'None' or self.inout_method == None: # used for object detection
+            inout_map = nn.Identity()
 
         else:
             raise ValueError

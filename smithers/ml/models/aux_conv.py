@@ -61,7 +61,7 @@ class AuxiliaryConvolutions(nn.Module):
                 layers += [
                     nn.Conv2d(self.layers[k][0],
                               self.layers[k][1],
-                              kernel_size=3, #1 change
+                              kernel_size=1,#3, #1 change
                               padding=0)
                 ]
                 # dim. reduction because padding=0

@@ -17,7 +17,7 @@ if torch.cuda.is_available():
 else:
     device = torch.device('cpu')
 
-def save_checkpoint(epoch, model, optimizer, cut_idx=None):
+def save_checkpoint_objdet(epoch, model, optimizer, cut_idx=None):
     '''
     Save model checkpoint.
 
@@ -185,11 +185,13 @@ def projection(proj_mat, data_loader, matrix, device = device):
     matrix_red = torch.zeros(0).to(device)
     num_batch = len(data_loader)
     batch_old = 0
-    for idx_, (batch, _) in enumerate(data_loader):
+    #for idx_, (batch, _) in enumerate(data_loader): #image classification
+    for idx_, batch in enumerate(data_loader): #object detection
         if idx_ >= num_batch:
             break
-
-        batch = batch.to(device)
+        
+        #batch = batch.to(device) #image classification
+        batch = batch[0].to(device) #object detection
 
         with torch.no_grad():
             #proj_data = (matrix[batch_old : batch_old + batch.size()[0], : ] @ proj_mat).cpu()
@@ -220,13 +222,18 @@ def forward_dataset(model, data_loader, device = device, flattening = True):
     print('Initializing dataset forwarding', flush = True)
     out_model = torch.zeros(0).to(device)
     num_batch = len(data_loader)
-    for idx_, (batch, target) in enumerate(data_loader):
+    #for idx_, (batch, target) in enumerate(data_loader): #image classification
+    for idx_, batch in enumerate(data_loader): #object detection
         if idx_ >= num_batch:
             break
+        # lista_tensori_gpu = list(map(lambda x: x.to(device), lista_tensori))
+        # se si vuole togliere (batch, target) a favore del solo batch
+
         # uncomment to get updates on the number of images forwarded
         #if idx_%1000 == 0:
         #    print('Forward batch number: {}'.format(idx_))
-        batch = batch.to(device)
+        #batch = batch.to(device) #image classification
+        batch = batch[0].to(device) #object detection
 
         with torch.no_grad():
             outputs = model(batch).to(device)

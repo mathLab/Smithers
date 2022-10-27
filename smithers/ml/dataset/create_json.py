@@ -82,10 +82,10 @@ def create_data_lists(voc07_path, voc12_path, out_folder):
 
     # Training data
     for path in [voc07_path, voc12_path]:
-        print(path)
         #if path != '/u/s/szanin/Smithers/smithers/ml/tutorials/None':
         if not path.endswith('/None'):# != '/u/s/szanin/Smithers/smithers/ml/tutorials/None':
             # Find IDs of images in training data
+            print(path)
             with open(os.path.join(path, 'ImageSets/Main/trainval.txt')) as f:
                 ids = f.read().splitlines()
             for ID in ids:
@@ -101,11 +101,11 @@ def create_data_lists(voc07_path, voc12_path, out_folder):
     assert len(train_objects) == len(train_images)
 
     # Save to file
-    with open(os.path.join(out_folder, 'TRAIN_images_cd.json'), 'w') as j:
+    with open(os.path.join(out_folder, 'TRAIN_images.json'), 'w') as j:
         json.dump(train_images, j)
-    with open(os.path.join(out_folder, 'TRAIN_objects_cd.json'), 'w') as j:
+    with open(os.path.join(out_folder, 'TRAIN_objects.json'), 'w') as j:
         json.dump(train_objects, j)
-    with open(os.path.join(out_folder, 'label_map_cd.json'), 'w') as j:
+    with open(os.path.join(out_folder, 'label_map.json'), 'w') as j:
         json.dump(label_map, j)  # save label map too
 
     print(
@@ -136,9 +136,9 @@ def create_data_lists(voc07_path, voc12_path, out_folder):
     assert len(test_objects) == len(test_images)
 
     # Save to file
-    with open(os.path.join(out_folder, 'TEST_images_cd.json'), 'w') as j:
+    with open(os.path.join(out_folder, 'TEST_images.json'), 'w') as j:
         json.dump(test_images, j)
-    with open(os.path.join(out_folder, 'TEST_objects_cd.json'), 'w') as j:
+    with open(os.path.join(out_folder, 'TEST_objects.json'), 'w') as j:
         json.dump(test_objects, j)
 
     print(

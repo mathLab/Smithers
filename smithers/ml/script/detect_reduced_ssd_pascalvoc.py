@@ -13,14 +13,14 @@ import torchvision.transforms as transforms
 from torch.utils import data
 import pickle
 
-from .vgg import VGG
+from smithers.ml.vgg import VGG
 from models.aux_conv import AuxiliaryConvolutions
 from models.predictor import PredictionConvolutions
 from dataset.pascalvoc_dataset import PascalVOCDataset
 from models.detector import Detector
 from models.utils import create_prior_boxes, save_checkpoint
-from .netadapter import NetAdapter
-from .utils import get_seq_model, Total_param, Total_flops
+from smithers.ml.netadapter import NetAdapter
+from smithers.ml.utils import get_seq_model, Total_param, Total_flops
 
 
 
@@ -41,12 +41,12 @@ weight_decay = 5e-4  # weight decay
 grad_clip = None
 # clip if gradients are exploding, which may happen at larger batch sizes
 
-#voc_labels = ('cat', 'dog')
-voc_labels = ('aeroplane', 'bicycle', 'bird', 'boat',
+voc_labels = ('cat', 'dog')
+'''voc_labels = ('aeroplane', 'bicycle', 'bird', 'boat',
         'bottle', 'bus', 'car', 'cat', 'chair',
         'cow', 'diningtable', 'dog', 'horse',
         'motorbike', 'person', 'pottedplant',
-        'sheep', 'sofa', 'train', 'tvmonitor')
+        'sheep', 'sofa', 'train', 'tvmonitor')'''
 label_map = {k: v + 1 for v, k in enumerate(voc_labels)}
 label_map['background'] = 0
 n_classes = len(label_map)
@@ -133,7 +133,7 @@ detector = Detector(network, check, priors_cxcy, n_classes, epochs,
                     batch_size, print_freq, lr, decay_lr_at,
                     decay_lr_to, momentum, weight_decay, grad_clip,
                     train_loader, test_loader)
-check = save_checkpoint(0, network, None)
+#check = save_checkpoint(0, network, None)
 print(detector.model)
 '''
 check = torch.load(check)

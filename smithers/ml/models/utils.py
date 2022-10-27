@@ -655,7 +655,7 @@ def clip_gradient(optimizer, grad_clip):
                 param.grad.data.clamp_(-grad_clip, grad_clip)
 
 
-def save_checkpoint(epoch, model, optimizer, cut_idx=None):
+def save_checkpoint_objdet(epoch, model, optimizer, cut_idx=None):
     '''
     Save model checkpoint.
 

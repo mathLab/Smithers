@@ -2,6 +2,7 @@
 Module focused on the creation of the object detector and implementaion of the
 training and testing phases.
 '''
+from functools import reduce
 from pprint import PrettyPrinter
 import time
 import torch
@@ -12,11 +13,9 @@ from tqdm import tqdm
 from PIL import ImageDraw, ImageFont
 
 from smithers.ml.models.multibox_loss import MultiBoxLoss
-from smithers.ml.models.utils import AverageMeter, clip_gradient,\
-     adjust_learning_rate, save_checkpoint, detect_objects, calculate_mAP
+from smithers.ml.models.utils import AverageMeter, clip_gradient, adjust_learning_rate, detect_objects, calculate_mAP, save_checkpoint_objdet 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-#device = torch.device("cpu")
 
 
 class Detector(nn.Module):
@@ -49,12 +48,15 @@ class Detector(nn.Module):
         :param bool grad_clip: clip if gradients are exploding, which may happen
             at larger batch sizes (sometimes at 32) - you will recognize it by a
             sorting error in the MultiBox loss calculation
-        :param iterable train_loader: iterable object, it load the dataset for
+        :param iterable train_loader: iterable object, it loads the dataset for
             training. It iterates over the given dataset, obtained combining a
             dataset(images, boxes and labels) and a sampler.
-        :param iterable test_loader: iterable object, it load the dataset for
+        :param iterable test_loader: iterable object, it loads the dataset for
             testing. It iterates over the given dataset, obtained combining a
             dataset(images, boxes and labels) and a sampler.
+        :param bool reduced_network: if True it loads the forward function
+            relative to the reduced detector, otherwise it loads the forward
+            function of the full detector.
         '''
         super(Detector, self).__init__()
 
@@ -108,6 +110,7 @@ class Detector(nn.Module):
             print('\nLoaded checkpoint from epoch %d.\n' % start_epoch)
             net = checkpoint['model']
             model = [net[i].to(device) for i in range(len(net))]
+            #model = [net[i].to(device) for i in range(len(net))]
             optimizer = checkpoint['optimizer']
 
         #Move to default device
@@ -169,9 +172,10 @@ class Detector(nn.Module):
         :return: predicted localizations and classes scores (tensors) for
             each image
         '''
+        images = images.to(device)   #dtype = torch.Tensor
         # Run VGG base network convolutions (lower level feature map generators)
-#       conv4_3, conv7 = self.model[0](images)
-        out_vgg = self.model[0](images)
+        conv4_3, conv7 = self.model[0](images)
+#        out_vgg = self.model[0](images)
         #CAMBIA COME DATO OUTPUT IN VGG, PIU' COMODA LISTA--. CAMBIARE IN TUTTI
         #I FILE!
 
@@ -180,23 +184,24 @@ class Detector(nn.Module):
 #        conv4_3 = conv4_3 / norm  # (N, 512, 38, 38)
 #        conv4_3 = conv4_3 * self.rescale_factors  # (N, 512, 38, 38)
         # (PyTorch autobroadcasts singleton dimensions during arithmetic)
-#        output_basenet = [conv4_3.to(device), conv7.to(device)]
-        output_basenet = [out_vgg.to(device)]
+        output_basenet = [conv4_3.to(device), conv7.to(device)]
+#        output_basenet = [out_vgg]
 
         # Run auxiliary convolutions (higher level feature map generators)
-#        output_auxconv = self.model[1](conv7)
+        output_auxconv = self.model[1](conv7)
 #        output_auxconv = self.model[1](out_vgg)
-        output_auxconv = self.model[1](out_vgg.view(out_vgg.size(0), -1))
-        output_auxconv = torch.unsqueeze(torch.unsqueeze(output_auxconv, dim=-1), dim=-1)
+#        output_auxconv = self.model[1](out_vgg.view(out_vgg.size(0), -1))
+#        output_auxconv = torch.unsqueeze(torch.unsqueeze(output_auxconv, dim=-1), dim=-1)
 ##        dim_kernel = int(np.sqrt(output_auxconv.size(1)))
 ##        output_auxconv = output_auxconv.view(output_auxconv.size(0), dim_kernel, dim_kernel)
 ##        output_auxconv = torch.unsqueeze(output_auxconv, dim=1)
-        output_auxconv = [output_auxconv.to(device)]
+###        output_auxconv = [output_auxconv.to(device)]
         # Run prediction convolutions (predict offsets w.r.t prior-boxes and
         # classes in each resulting localization box)
         locs, classes_scores = self.model[2](output_basenet, output_auxconv)
 
         return locs.to(device), classes_scores.to(device)
+
 
     def train_epoch(self, epoch):
         """
@@ -272,6 +277,7 @@ class Detector(nn.Module):
         '''
         Total training of the detector for all the epochs
         '''
+        print('Training has started.')
         # Epochs
         loss_values = []
         for epoch in range(self.start_epoch, self.epochs):
@@ -284,11 +290,9 @@ class Detector(nn.Module):
             loss_val = self.train_epoch(epoch=epoch)
             loss_values.extend([loss_val])
 
-            # Save checkpoint
-            checkpoint_new = save_checkpoint(epoch, self.model, self.optimizer)
-            if loss_val	< 1.0:
-                print(loss_val)
-                return checkpoint_new, loss_values
+        # Save checkpoint
+        print('Training is now complete.')
+        checkpoint_new = save_checkpoint_objdet(epoch, self.model, self.optimizer)
         return checkpoint_new, loss_values
 
     def eval_detector(self, label_map, checkpoint):
@@ -306,7 +310,7 @@ class Detector(nn.Module):
         # Load model checkpoint that is to be evaluated
         checkpoint = torch.load(checkpoint)
         model = checkpoint['model']
-        model = [model[i].to(device) for i in range(len(model))]
+#        model = [model[i].to(device) for i in range(len(model))]
 #        model = checkpoint.model
         # set the network(all classes derived from nn.module) in evaluation mode
         for i in range(len(model) - 1):
@@ -530,3 +534,58 @@ class Detector(nn.Module):
         del draw
 
         return annotated_image
+
+
+class Reduced_Detector(Detector):
+    '''
+    Class that handles the creation of the Reduced Object Detector and its training and
+    testing phases. This class extends the Detector class.
+    '''
+    '''def __init__(self, network, checkpoint, priors_cxcy, n_classes, epochs,
+                 batch_size, print_freq, lr, decay_lr_at, decay_lr_to, momentum,
+                 weight_decay, grad_clip, train_loader, test_loader):
+        super(Reduced_Detector, self).__init__(self, network, checkpoint, priors_cxcy, n_classes, epochs,
+                 batch_size, print_freq, lr, decay_lr_at, decay_lr_to, momentum,
+                 weight_decay, grad_clip, train_loader, test_loader)'''
+
+    def forward(self, images):
+        '''
+        Forward propagation of the entire network
+        :param tensor images: dataset of images used
+        :return: predicted localizations and classes scores (tensors) for
+            each image
+        '''
+        images = images.to(device)   #dtype = torch.Tensor
+        # Run VGG base network convolutions (lower level feature map generators)
+
+#       conv4_3, conv7 = self.model[0](images)
+        out_vgg = self.model[0](images)
+        #CAMBIA COME DATO OUTPUT IN VGG, PIU' COMODA LISTA--. CAMBIARE IN TUTTI
+        #I FILE!
+
+        # Rescale conv4_3 (N, 512, 38, 38) after L2 norm
+#        norm = conv4_3.pow(2).sum(dim=1, keepdim=True).sqrt()  # (N, 1, 38, 38)
+#        conv4_3 = conv4_3 / norm  # (N, 512, 38, 38)
+#        conv4_3 = conv4_3 * self.rescale_factors  # (N, 512, 38, 38)
+        # (PyTorch autobroadcasts singleton dimensions during arithmetic)
+#        output_basenet = [conv4_3.to(device), conv7.to(device)]
+        output_basenet = [out_vgg]
+        print(f'Il tipo di out_vgg è {type(out_vgg)}', flush = True)
+        print(f'')
+
+        # Run auxiliary convolutions (higher level feature map generators)
+#        output_auxconv = self.model[1](conv7)
+#        output_auxconv = self.model[1](out_vgg)
+        output_auxconv = self.model[1](out_vgg)
+#        output_auxconv = self.model[1](out_vgg.view(out_vgg.size(0), -1)) #no hosvd
+        print(f'Il tipo di output_auxconv è {type(output_auxconv)}', flush = True)
+#        output_auxconv = torch.unsqueeze(torch.unsqueeze(output_auxconv, dim=-1), dim=-1) #no hosvd
+##        dim_kernel = int(np.sqrt(output_auxconv.size(1)))
+##        output_auxconv = output_auxconv.view(output_auxconv.size(0), dim_kernel, dim_kernel)
+##        output_auxconv = torch.unsqueeze(output_auxconv, dim=1)
+        output_auxconv = [output_auxconv.to(device)]
+        # Run prediction convolutions (predict offsets w.r.t prior-boxes and
+        # classes in each resulting localization box)
+        locs, classes_scores = self.model[2](output_basenet, output_auxconv)
+
+        return locs.to(device), classes_scores.to(device)

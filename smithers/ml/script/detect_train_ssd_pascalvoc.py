@@ -82,7 +82,7 @@ predictor = PredictionConvolutions(n_classes)
 network = [base_net, aux_conv, predictor]
 priors_cxcy = create_prior_boxes()
 end_init = time()
-print('Time needed to initialize the net', end_init-start_init)
+print(f'Time needed to initialize the net: {round(end_init-start_init,2)} seconds')
 
 check = None 
 #check = 'checkpoint_ssd300_tutorial.pth.tar'
@@ -95,7 +95,7 @@ detector = Detector(network, check, priors_cxcy, n_classes, epochs,
 print(detector.model)
 check, loss_value = detector.train_detector()
 end = time()
-print('tìme needed for train and test', end-start)
+print(f'Time needed for training and testing the net: {round(end-start,2)} seconds')
 start_test = time()
 epo = np.arange(start=0, stop=epochs, step=1)
 plt.plot(epo, loss_value)
@@ -105,7 +105,7 @@ plt.savefig('loss_pascal_cat.png')
 detector.eval_detector(label_map, check)
 end_test = time()
 
-print('tìme needed for train and test', end_test-start_test)
+print(f'Time needed for training and testing the net: {round(end_test-start_test,2)} seconds')
 
 
 img_path = 'voc_dir/VOC2007/JPEGImages/002215.jpg'
