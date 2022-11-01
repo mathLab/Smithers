@@ -91,7 +91,7 @@ class MultiBoxLoss(nn.Module):
         batch_size = predicted_locs.size(0)
         n_priors = self.priors_cxcy.size(0)
         n_classes = predicted_scores.size(2)
-        print(f'n_priors è {n_priors}\npredicted_locs.size(1) è {predicted_locs.size(1)}\npredicted_scores.size(1) è {predicted_scores.size(1)}')
+        #print(f'n_priors è {n_priors},\npredicted_locs.size(1) è {predicted_locs.size(1)}\npredicted_scores.size(1) è {predicted_scores.size(1)}', flush = True)
         assert n_priors == predicted_locs.size(1) == predicted_scores.size(1)
 
         true_locs = torch.zeros((batch_size, n_priors, 4),

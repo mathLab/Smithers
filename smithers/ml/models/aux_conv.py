@@ -61,7 +61,7 @@ class AuxiliaryConvolutions(nn.Module):
                 layers += [
                     nn.Conv2d(self.layers[k][0],
                               self.layers[k][1],
-                              kernel_size=1,#3, #1 change
+                              kernel_size=3,#3, #1 change
                               padding=0)
                 ]
                 # dim. reduction because padding=0
@@ -83,16 +83,18 @@ class AuxiliaryConvolutions(nn.Module):
         Forward propagation.
         :param Tensor conv7_feats: output of last classification layer
             base network, lower-level conv7 feature map, a tensor of
-            dimensions (N, 1024, 19, 19)in the case of VGG16
+            dimensions (N, 1024, 19, 19) in the case of VGG16
 	Note: Since these layers are thought as additional layers to be placed
         after a base network, pay attention that the dimensions of conv7_feats
         have to be consistent with that of the first layer of this structure.
         :return list out_conv2: list containing higher-level feature maps
             conv8_2, conv9_2, conv10_2, and conv11_2
         """
-        out_in = conv7_feats
+        out_in = conv7_feats ##aggiunto: [1]
+        #print(f'il tipo di out_in[0] è {type(out_in[0])}', flush = True)
         out_conv2 = []
         for conv in self.features:
+            #print(f'il tipo di conv(out_in) è {type(conv(out_in))}, dovrebbe essere un tensore', flush = True)
             out = F.relu(conv(out_in))
             out_conv2.append(out)
             out_in = out

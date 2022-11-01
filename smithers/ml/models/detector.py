@@ -176,8 +176,6 @@ class Detector(nn.Module):
         # Run VGG base network convolutions (lower level feature map generators)
         conv4_3, conv7 = self.model[0](images)
 #        out_vgg = self.model[0](images)
-        #CAMBIA COME DATO OUTPUT IN VGG, PIU' COMODA LISTA--. CAMBIARE IN TUTTI
-        #I FILE!
 
         # Rescale conv4_3 (N, 512, 38, 38) after L2 norm
 #        norm = conv4_3.pow(2).sum(dim=1, keepdim=True).sqrt()  # (N, 1, 38, 38)
@@ -190,7 +188,7 @@ class Detector(nn.Module):
         # Run auxiliary convolutions (higher level feature map generators)
         output_auxconv = self.model[1](conv7)
 #        output_auxconv = self.model[1](out_vgg)
-#        output_auxconv = self.model[1](out_vgg.view(out_vgg.size(0), -1))
+#        output_auxconv = self.model[1](out_vgg.view(out_vgg.size(0), -1)) 
 #        output_auxconv = torch.unsqueeze(torch.unsqueeze(output_auxconv, dim=-1), dim=-1)
 ##        dim_kernel = int(np.sqrt(output_auxconv.size(1)))
 ##        output_auxconv = output_auxconv.view(output_auxconv.size(0), dim_kernel, dim_kernel)
@@ -273,13 +271,14 @@ class Detector(nn.Module):
         # free some memory since their histories may be stored
         return loss.item()
 
-    def train_detector(self):
+    def train_detector(self, label_map = None): ##MODIF
         '''
         Total training of the detector for all the epochs
         '''
         print('Training has started.')
         # Epochs
         loss_values = []
+        mAP_values = [] ##MODIF
         for epoch in range(self.start_epoch, self.epochs):
 
             # Decay learning rate at particular epochs
@@ -289,11 +288,40 @@ class Detector(nn.Module):
             # One epoch's training
             loss_val = self.train_epoch(epoch=epoch)
             loss_values.extend([loss_val])
+            mAP_values.extend([10 * self.eval_detector(label_map, 'checkpoint_ssd300.pth.tar')]) ##MODIF
+            if epoch%500 == 0: ##MODIF
+                place_holder = save_checkpoint_objdet(epoch, self.model, self.optimizer, with_epochs = 'Yes') ##MODIF
 
         # Save checkpoint
         print('Training is now complete.')
         checkpoint_new = save_checkpoint_objdet(epoch, self.model, self.optimizer)
-        return checkpoint_new, loss_values
+        return checkpoint_new, loss_values, #mAP_values  ##MODIF
+
+    def train_detector_with_eval(self, label_map):
+        '''
+        Total training of the detector for all the epochs
+        '''
+        print('Training (with evaluation) has started.')
+        # Epochs
+        loss_values = []
+        mAP_values = [] 
+        for epoch in range(self.start_epoch, self.epochs):
+
+            # Decay learning rate at particular epochs
+            if epoch in self.decay_lr_at:
+                adjust_learning_rate(self.optimizer, self.decay_lr_to)
+
+            # One epoch's training
+            loss_val = self.train_epoch(epoch=epoch)
+            loss_values.extend([loss_val])
+            mAP_values.extend([10 * self.eval_current_detector(label_map)]) ##MODIF
+            if epoch%500 == 0: ##MODIF
+                place_holder = save_checkpoint_objdet(epoch, self.model, self.optimizer, with_epochs = 'Yes') ##MODIF
+
+        # Save checkpoint
+        print('Training (with evaluation) is now complete.')
+        checkpoint_new = save_checkpoint_objdet(epoch, self.model, self.optimizer)
+        return checkpoint_new, loss_values, mAP_values  ##MODIF
 
     def eval_detector(self, label_map, checkpoint):
         '''
@@ -381,6 +409,93 @@ class Detector(nn.Module):
         pp.pprint(APs)
 
         print('\nMean Average Precision (mAP): %.3f' % mAP)
+        return mAP ##MODIF
+
+    def eval_current_detector(self, label_map):
+        '''
+	Evaluation/Testing Phase
+
+        :param dict label_map: dictionary for the label map, where the keys are
+            the labels of the objects(the classes) and their values the number
+            of the classes to which they belong (0 for the background). Thus the
+            length of this dict will be the number of the classes of the
+            dataset.
+        :param str checkpoint: path to the checkpoint of the model obtained
+            after the training phase
+        '''
+        # Load model checkpoint that is to be evaluated
+        model = self.model
+#        model = [model[i].to(device) for i in range(len(model))]
+#        model = checkpoint.model
+        # set the network(all classes derived from nn.module) in evaluation mode
+        for i in range(len(model) - 1):
+            model[i].eval()
+            #model[i].features.eval()
+        model[-1].features_loc.eval()
+        model[-1].features_cl.eval()
+        # Lists to store detected and true boxes, labels, scores
+        det_boxes = list()
+        det_labels = list()
+        det_scores = list()
+        true_boxes = list()
+        true_labels = list()
+        true_difficulties = list()
+        # it is necessary to know which objects are 'difficult', see
+        # 'calculate_mAP' in utils.py
+
+        # Good formatting when printing the APs for each class and mAP
+        pp = PrettyPrinter()
+
+        #torch.no_grad() impacts the autograd engine and deactivate it.
+        #It will reduce memory usage and speed up computations but you
+        #would not be able to backprop (which you do not want in an eval
+        #script).
+        with torch.no_grad():
+            # Batches
+            for i, (images, boxes, labels, difficulties) in enumerate(self.test_loader):
+                images = images.to(device)  # (N, 3, 300, 300)
+
+                # Forward prop.
+                predicted_locs, predicted_scores = self.forward(images)
+
+                # Detect objects in SSD output
+#                print('priors:', self.priors.size())
+#                print('predicted_locs', predicted_locs.size())
+#                print('predicted_scores', predicted_scores.size())
+                det_boxes_batch, det_labels_batch, det_scores_batch = detect_objects(
+                    self.priors,
+                    predicted_locs,
+                    predicted_scores,
+                    self.n_classes,
+                    min_score=0.01,
+                    max_overlap=0.45,
+                    top_k=20)
+                # Evaluation MUST be at min_score=0.01, max_overlap=0.45,
+                # top_k=200 for fair comparision with the paper's results
+                # and other repos
+
+                # Store this batch's results for mAP calculation
+                boxes = [b.to(device) for b in boxes]
+                labels = [l.to(device) for l in labels]
+                difficulties = [d.to(device) for d in difficulties]
+
+                det_boxes.extend(det_boxes_batch)
+                det_labels.extend(det_labels_batch)
+                det_scores.extend(det_scores_batch)
+                true_boxes.extend(boxes)
+                true_labels.extend(labels)
+                true_difficulties.extend(difficulties)
+
+            # Calculate mAP
+            APs, mAP = calculate_mAP(det_boxes, det_labels, det_scores,
+                                     true_boxes, true_labels, true_difficulties,
+                                     label_map)
+        #print(APs)
+        # Print AP for each class
+        #pp.pprint(APs)
+
+        print('\nMean Average Precision (mAP): %.3f' % mAP)
+        return mAP ##MODIF
 
     def detect(self,
                original_image,
@@ -570,15 +685,13 @@ class Reduced_Detector(Detector):
         # (PyTorch autobroadcasts singleton dimensions during arithmetic)
 #        output_basenet = [conv4_3.to(device), conv7.to(device)]
         output_basenet = [out_vgg]
-        print(f'Il tipo di out_vgg è {type(out_vgg)}', flush = True)
-        print(f'')
 
         # Run auxiliary convolutions (higher level feature map generators)
 #        output_auxconv = self.model[1](conv7)
 #        output_auxconv = self.model[1](out_vgg)
         output_auxconv = self.model[1](out_vgg)
 #        output_auxconv = self.model[1](out_vgg.view(out_vgg.size(0), -1)) #no hosvd
-        print(f'Il tipo di output_auxconv è {type(output_auxconv)}', flush = True)
+        
 #        output_auxconv = torch.unsqueeze(torch.unsqueeze(output_auxconv, dim=-1), dim=-1) #no hosvd
 ##        dim_kernel = int(np.sqrt(output_auxconv.size(1)))
 ##        output_auxconv = output_auxconv.view(output_auxconv.size(0), dim_kernel, dim_kernel)
