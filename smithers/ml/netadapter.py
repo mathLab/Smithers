@@ -10,7 +10,7 @@ import numpy as np
 from smithers.ml.rednet import RedNet
 from smithers.ml.fnn import FNN, training_fnn
 from smithers.ml.tensor_product_layer import tensor_product_layer
-from smithers.ml.utils import PossibleCutIdx, spatial_gradients, forward_dataset, projection
+from smithers.ml.utils import PossibleCutIdx, spatial_gradients, forward_dataset, projection, forward_dataset_AHOSVD
 from smithers.ml.utils import randomized_svd
 from smithers.ml.AHOSVD import AHOSVD
 from smithers.ml.pcemodel import PCEModel
@@ -171,6 +171,57 @@ class NetAdapter():
             raise ValueError
 
         return snapshots_red, proj_mat
+    
+    def _reduce_new(self, pre_model, post_model, train_dataset, train_loader, device = device, mode_list_batch = None):
+        '''
+        Function that performs the reduction of the high dimensional
+        output of the pre-model
+        :param nn.Sequential pre_model: sequential model representing
+            the pre-model.
+        :param nn.Sequential post_model: sequential model representing
+            the pre-model.
+        :param Dataset train_dataset: dataset containing the training
+            images.
+        :param iterable train_loader: iterable object for loading the dataset.
+            It iterates over the given dataset, obtained combining a
+            dataset(images and labels) and a sampler.
+        :param torch.device device: object representing the device on
+            which a torch.Tensor is or will be allocated.
+        :returns: tensors matrix_red and proj_mat containing the reduced output
+            of the pre-model (n_images x red_dim) and the projection matrix
+            (n_feat x red_dim) respectively.
+        :rtype: torch.tensor
+    	'''
+
+        if self.red_method == 'AS':
+            #code for AS
+            matrix_features = forward_dataset(pre_model, train_loader).to(device)
+            proj_mat = self._reduce_AS(pre_model, post_model, train_dataset)
+            snapshots_red = projection(proj_mat, train_loader, matrix_features)
+
+        elif self.red_method == 'POD':
+            #code for POD
+            matrix_features = forward_dataset(pre_model, train_loader).to(device)
+            proj_mat = self._reduce_POD(matrix_features)
+            snapshots_red = projection(proj_mat, train_loader, matrix_features)
+
+        elif self.red_method == 'RandSVD': 
+            #code for RandSVD
+            matrix_features = forward_dataset(pre_model, train_loader).to(device)
+            proj_mat = self._reduce_RandSVD(matrix_features)
+            snapshots_red = projection(proj_mat, train_loader, matrix_features)
+
+        elif self.red_method == 'HOSVD': 
+            #code for HOSVD
+            snapshots_red, proj_mat, _ = forward_dataset_AHOSVD(pre_model, train_loader, mode_list_batch, device = device)
+            #proj_mat, ahosvd = self._reduce_HOSVD(tensor_features, mode_list_batch)
+            #snapshots_red = ahosvd.project_multiple_observations(tensor_features)
+            #snapshots_red = torch.squeeze(snapshots_red.flatten(1)).detach()
+
+        else:
+            raise ValueError
+
+        return snapshots_red, proj_mat
 
     def _inout_mapping_FNN(self, matrix_red, train_labels, n_class):
         '''
@@ -289,7 +340,7 @@ class NetAdapter():
         post_model = input_network[cut_idxlayer:].to(device, dtype=input_type)
         if self.inout_method == 'PCE':
             out_model = forward_dataset(input_network, train_loader)
-        snapshots_red, proj_mat = self._reduce(pre_model, post_model, train_dataset, train_loader, device, mode_list_batch)
+        snapshots_red, proj_mat = self._reduce_new(pre_model, post_model, train_dataset, train_loader, device, mode_list_batch)
         if self.inout_method == 'PCE':
             inout_map = self._inout_mapping(snapshots_red, n_class, out_model, train_labels, train_loader)
         else:

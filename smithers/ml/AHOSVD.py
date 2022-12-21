@@ -43,7 +43,7 @@ class AHOSVD():
                 matrices_list.append((index / (index + 1)) * current_list[i] + (1/(index + 1)) * new_list[i])
             return matrices_list
         elif index < 0:
-            raise ValueError('index variable must be greater or equal to 0.')
+            raise ValueError('Index variable must be greater or equal to 0.')
     
     def _partial_HOSVD(self, batch_from_tensor):
         """

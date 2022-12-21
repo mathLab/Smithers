@@ -9,6 +9,8 @@ import torch.nn.functional as F
 import numpy as np
 from sklearn import decomposition
 from scipy import linalg
+from smithers.ml.AHOSVD import AHOSVD
+
 
 
 
@@ -243,7 +245,59 @@ def forward_dataset(model, data_loader, device = device, flattening = True):
     print('Dataset forwarding complete', flush = True)
     return out_model.to(device)
 
+def forward_dataset_AHOSVD(model, data_loader, mode_list_batch, device = device):
+    '''
+    Forward of a model using the whole dataset, i.e. the forward is
+    performed by splitting the dataset in batches in order to reduce
+    the computational effort needed.
+
+    :param nn.Sequential/nn.Module model: model.
+    :param iterable data_loader: iterable object for loading the dataset.
+        It iterates over the given dataset, obtained combining a
+        dataset(images and labels) and a sampler.
+    :param torch.device device: device used to allocate the variables for the function.
+    :param bool flattening: used to state whether flattening is desired or not (e.g. flattening = False for HOSVD).
+    :return: output of the model computed on the whole dataset with
+        dimensions n_images x n_feat (corresponds to n_class for the last
+        layer)
+    :rtype: torch.Tensor
+    '''
+    print('Initializing dataset forwarding (AHOSVD included)', flush = True)
+    out_model = torch.zeros(0).to(device)
+    ahosvd = AHOSVD(torch.zeros(0), mode_list_batch, mode_list_batch[0])
+    #for idx_, (batch, target) in enumerate(data_loader): #image classification
+    for idx_, batch in enumerate(data_loader): #object detection
+        #batch = batch.to(device) #image classification
+        batch = batch[0].to(device) #object detection
+        
+
+        with torch.no_grad():
+            outputs = model(batch).to(device)
+            ahosvd_temp = AHOSVD(outputs, mode_list_batch, mode_list_batch[0])
+            ahosvd_temp.compute_u_matrices()
+            ahosvd_temp.compute_proj_matrices()
+
+            ahosvd.proj_matrices = incremental_average(ahosvd.proj_matrices, ahosvd_temp.proj_matrices, idx_)
+            del ahosvd_temp
+            del outputs
+            torch.cuda.empty_cache()
+    proj_mat = ahosvd.proj_matrices
+    #for idx_, (batch, target) in enumerate(data_loader): #image classification
+    for idx_, batch in enumerate(data_loader): #object detection
+        #batch = batch.to(device) #image classification
+        batch = batch[0].to(device) #object detection
+        with torch.no_grad():
+            outputs = model(batch).to(device)
+            outputs = ahosvd.project_multiple_observations(outputs)
+        out_model = torch.cat([out_model, outputs.to(device)]).to(device)
+        del outputs
+        torch.cuda.empty_cache()
+    snapshots_red = torch.squeeze(out_model.flatten(1)).detach()
+    print('Dataset forwarding (with AHOSVD reduction) complete', flush = True)
+    return snapshots_red, proj_mat, ahosvd
+
     
+
 
 def decimate(tensor, m):
     '''
@@ -465,6 +519,25 @@ def randomized_svd(M, n_components, n_oversamples=10, n_iter=2):
     U = Q @ Uhat
     
     return U[:, :n_components], s[:n_components], V[:n_components, :]
+
+
+def incremental_average(current_list, new_list, index):
+    """
+    Function used to compute the incremental step for a list containing already computed
+    averages when another list of new values is given
+    :param list current_list: list containing the current averages
+    :param list new_list: list of the new values
+    :param int index: defines the number of elements the current average is taken over
+    :return: the updated list of averages
+    :rtype: list
+    """
+    matrices_list = []
+    if index == 0:
+        return new_list
+    elif index > 0:
+        for i in range(len(current_list)):
+            matrices_list.append((index / (index + 1)) * current_list[i] + (1/(index + 1)) * new_list[i])
+        return matrices_list
 
 
 
