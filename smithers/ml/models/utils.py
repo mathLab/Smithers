@@ -655,7 +655,7 @@ def clip_gradient(optimizer, grad_clip):
                 param.grad.data.clamp_(-grad_clip, grad_clip)
 
 
-def save_checkpoint_objdet(epoch, model, optimizer, cut_idx = None, with_epochs = None): ##MODIF
+def save_checkpoint_objdet(epoch, model, optimizer, cut_idx = None, with_epochs = None):
     '''
     Save model checkpoint.
 
@@ -666,16 +666,21 @@ def save_checkpoint_objdet(epoch, model, optimizer, cut_idx = None, with_epochs 
     :rtype: str
     '''
     state = {'epoch': epoch, 'model': model, 'optimizer': optimizer}
-    if cut_idx == None and with_epochs == None: ##MODIF
+    if cut_idx == None and with_epochs == None:
         filename = 'checkpoint_ssd300.pth.tar'
-    elif cut_idx == None and with_epochs != None: ##MODIF
-        filename = f'checkpoint_ssd300_epoch_{epoch}.pth.tar' ##MODIF
-        torch.save(state, filename) ##MODIF
-        filename = 'checkpoint_ssd300.pth.tar' ##MODIF
+    elif cut_idx == None and with_epochs != None:
+        filename = f'checkpoint_ssd300_epoch_{epoch}.pth.tar'
+        torch.save(state, filename)
+        filename = 'checkpoint_ssd300.pth.tar'
     else:
         filename = 'checkpoint_VGG16_ASNet_sparse_cutID_%d.pth.tar' % (cut_idx)
     torch.save(state, filename)
     return filename
+
+def save_checkpoint_objdet_name(epoch, model, optimizer, path):
+    state = {'epoch': epoch, 'model': model, 'optimizer': optimizer}
+    torch.save(state, path)
+    return path
 
 
 def adjust_learning_rate(optimizer, scale):
