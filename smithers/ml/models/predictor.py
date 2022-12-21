@@ -137,6 +137,8 @@ class PredictionConvolutions(nn.Module):
         batch_size = low_feats[0].size(0)
         conv_feats = low_feats + auxconv_feats
 
+        
+
         locs = []
         classes_scores = []
 
@@ -158,7 +160,7 @@ class PredictionConvolutions(nn.Module):
             # of memory, needed for .view() below)
             cl_conv = cl_conv.view(batch_size, -1, self.n_classes)
             classes_scores.append(cl_conv)
-
+        
         # A total of 8732 boxes
         # Concatenate in this specific order (i.e. must match the order of
         # the prior-boxes)

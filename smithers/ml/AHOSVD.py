@@ -42,6 +42,8 @@ class AHOSVD():
             for i in range(len(current_list)):
                 matrices_list.append((index / (index + 1)) * current_list[i] + (1/(index + 1)) * new_list[i])
             return matrices_list
+        elif index < 0:
+            raise ValueError('index variable must be greater or equal to 0.')
     
     def _partial_HOSVD(self, batch_from_tensor):
         """
@@ -52,8 +54,6 @@ class AHOSVD():
         :rtype: list[torch.Tensor]
         """
         HOSVD = hosvd(batch_from_tensor.shape)
-        #HOSVD.fit(batch_from_tensor)
-        #return HOSVD.modes_matrices[1:]
         HOSVD.fit(batch_from_tensor, return_S_tensor = False, for_AHOSVD = True)
         return HOSVD.modes_matrices
 

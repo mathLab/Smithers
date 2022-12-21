@@ -13,7 +13,7 @@ from tqdm import tqdm
 from PIL import ImageDraw, ImageFont
 
 from smithers.ml.models.multibox_loss import MultiBoxLoss
-from smithers.ml.models.utils import AverageMeter, clip_gradient, adjust_learning_rate, detect_objects, calculate_mAP, save_checkpoint_objdet 
+from smithers.ml.models.utils import AverageMeter, clip_gradient, adjust_learning_rate, detect_objects, calculate_mAP, save_checkpoint_objdet, save_checkpoint_objdet_name
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -25,7 +25,7 @@ class Detector(nn.Module):
     '''
     def __init__(self, network, checkpoint, priors_cxcy, n_classes, epochs,
                  batch_size, print_freq, lr, decay_lr_at, decay_lr_to, momentum,
-                 weight_decay, grad_clip, train_loader, test_loader):
+                 weight_decay, grad_clip, train_loader, test_loader, optim_str = 'Adam'):
         '''
     	:param list network: list of the different parts that compose the network
             For each element you need to construct it using the class related.
@@ -76,7 +76,7 @@ class Detector(nn.Module):
         self.train_loader = train_loader
         self.test_loader = test_loader
         self.start_epoch, self.model, self.optimizer = self.load_network(
-            network, checkpoint)
+            network, checkpoint, optim_str)
         # Since lower level features (conv4_3_feats) have considerably larger
         # scales, we take the L2 norm and rescale. Rescale factor is initially
         # set at 20, but is learned for each channel during back-prop
@@ -86,7 +86,7 @@ class Detector(nn.Module):
         self.epochs = self.start_epoch + epochs
         self.classifier = 'ssd'
 
-    def load_network(self, network, checkpoint):
+    def load_network(self, network, checkpoint, optim_str):
         '''
         Initialize model or load checkpoint
         If checkpoint is None, initialize the model and optimizer
@@ -103,7 +103,7 @@ class Detector(nn.Module):
         if checkpoint is None:
             start_epoch = 0
             model = [network[i].to(device) for i in range(len(network))]
-            optimizer = self.init_optimizer(model, 'Adam')
+            optimizer = self.init_optimizer(model, optim_str)
         else:
             checkpoint = torch.load(checkpoint)
             start_epoch = checkpoint['epoch'] + 1
@@ -271,14 +271,14 @@ class Detector(nn.Module):
         # free some memory since their histories may be stored
         return loss.item()
 
-    def train_detector(self, label_map = None): ##MODIF
+    def train_detector(self, label_map = None): 
         '''
         Total training of the detector for all the epochs
         '''
         print('Training has started.')
         # Epochs
         loss_values = []
-        mAP_values = [] ##MODIF
+        mAP_values = [] 
         for epoch in range(self.start_epoch, self.epochs):
 
             # Decay learning rate at particular epochs
@@ -288,14 +288,15 @@ class Detector(nn.Module):
             # One epoch's training
             loss_val = self.train_epoch(epoch=epoch)
             loss_values.extend([loss_val])
-            mAP_values.extend([10 * self.eval_detector(label_map, 'checkpoint_ssd300.pth.tar')]) ##MODIF
-            if epoch%500 == 0: ##MODIF
-                place_holder = save_checkpoint_objdet(epoch, self.model, self.optimizer, with_epochs = 'Yes') ##MODIF
+            mAP_values.extend([10 * self.eval_detector(label_map, 'checkpoint_ssd300.pth.tar')]) 
+            if epoch%500 == 0: 
+                place_holder = save_checkpoint_objdet(epoch, self.model, self.optimizer, with_epochs = 'Yes') 
+                #save_checkpoint_objdet(epoch, self.model, self.optimizer, f'checkpoint_ssd300_epoch_{epoch}.pth.tar')
 
         # Save checkpoint
         print('Training is now complete.')
         checkpoint_new = save_checkpoint_objdet(epoch, self.model, self.optimizer)
-        return checkpoint_new, loss_values, #mAP_values  ##MODIF
+        return checkpoint_new, loss_values
 
     def train_detector_with_eval(self, label_map):
         '''
@@ -314,14 +315,48 @@ class Detector(nn.Module):
             # One epoch's training
             loss_val = self.train_epoch(epoch=epoch)
             loss_values.extend([loss_val])
-            mAP_values.extend([10 * self.eval_current_detector(label_map)]) ##MODIF
-            if epoch%500 == 0: ##MODIF
-                place_holder = save_checkpoint_objdet(epoch, self.model, self.optimizer, with_epochs = 'Yes') ##MODIF
+            mAP_values.extend([10 * self.eval_current_detector(label_map)]) 
+            if epoch%500 == 0: 
+                place_holder = save_checkpoint_objdet(epoch, self.model, self.optimizer, with_epochs = 'Yes') 
 
         # Save checkpoint
         print('Training (with evaluation) is now complete.')
-        checkpoint_new = save_checkpoint_objdet(epoch, self.model, self.optimizer)
-        return checkpoint_new, loss_values, mAP_values  ##MODIF
+        filename = 'checkpoint_ssd300.pth.tar'
+        #filename = f'./Results/{self.epochs}_{mode_list_batch[0]}_{mode_list_batch[1]}_{mode_list_batch[2]}_{mode_list_batch[3]}/checkpoint_ssd300.pth.tar'
+        checkpoint_new = save_checkpoint_objdet(epoch, self.model, self.optimizer)#, filename)
+        return checkpoint_new, loss_values, mAP_values  
+
+
+    def train_detector_with_eval_name(self, label_map, mode_list_batch = [], cutoff_idx = ''):
+        '''
+        Total training of the detector for all the epochs
+        '''
+        print('Training (with evaluation) has started.')
+        # Epochs
+        loss_values = []
+        mAP_values = [] 
+        for epoch in range(self.start_epoch, self.epochs):
+
+            # Decay learning rate at particular epochs
+            #if epoch in self.decay_lr_at:
+            #    adjust_learning_rate(self.optimizer, self.decay_lr_to)
+
+            # One epoch's training
+            loss_val = self.train_epoch(epoch=epoch)
+            loss_values.extend([loss_val])
+            mAP_values.extend([10 * self.eval_current_detector(label_map)]) 
+            if epoch%500 == 0 and len(mode_list_batch) >0: 
+                filename = f'./Results/{self.epochs}_{mode_list_batch[0]}_{mode_list_batch[1]}_{mode_list_batch[2]}_{mode_list_batch[3]}_cut{str(cutoff_idx)}/checkpoint_ssd300_epoch_{epoch}.pth.tar'
+                placeholder = save_checkpoint_objdet_name(epoch, self.model, self.optimizer, filename)
+            elif epoch%500 == 0 and len(mode_list_batch) == 0: 
+                filename = f'checkpoint_ssd300_epoch_{epoch}.pth.tar'
+                placeholder = save_checkpoint_objdet_name(epoch, self.model, self.optimizer, filename)
+        # Save checkpoint
+        print('Training (with evaluation) is now complete.')
+        #filename = 'checkpoint_ssd300.pth.tar'
+        filename = f'./Results/{self.epochs}_{mode_list_batch[0]}_{mode_list_batch[1]}_{mode_list_batch[2]}_{mode_list_batch[3]}_cut{str(cutoff_idx)}/checkpoint_ssd300.pth.tar'
+        checkpoint_new = save_checkpoint_objdet_name(epoch, self.model, self.optimizer, filename)
+        return checkpoint_new, loss_values, mAP_values  
 
     def eval_detector(self, label_map, checkpoint):
         '''
@@ -409,7 +444,7 @@ class Detector(nn.Module):
         pp.pprint(APs)
 
         print('\nMean Average Precision (mAP): %.3f' % mAP)
-        return mAP ##MODIF
+        return mAP 
 
     def eval_current_detector(self, label_map):
         '''
@@ -495,7 +530,7 @@ class Detector(nn.Module):
         #pp.pprint(APs)
 
         print('\nMean Average Precision (mAP): %.3f' % mAP)
-        return mAP ##MODIF
+        return mAP 
 
     def detect(self,
                original_image,
@@ -672,30 +707,13 @@ class Reduced_Detector(Detector):
         '''
         images = images.to(device)   #dtype = torch.Tensor
         # Run VGG base network convolutions (lower level feature map generators)
-
-#       conv4_3, conv7 = self.model[0](images)
         out_vgg = self.model[0](images)
-        #CAMBIA COME DATO OUTPUT IN VGG, PIU' COMODA LISTA--. CAMBIARE IN TUTTI
-        #I FILE!
-
-        # Rescale conv4_3 (N, 512, 38, 38) after L2 norm
-#        norm = conv4_3.pow(2).sum(dim=1, keepdim=True).sqrt()  # (N, 1, 38, 38)
-#        conv4_3 = conv4_3 / norm  # (N, 512, 38, 38)
-#        conv4_3 = conv4_3 * self.rescale_factors  # (N, 512, 38, 38)
-        # (PyTorch autobroadcasts singleton dimensions during arithmetic)
-#        output_basenet = [conv4_3.to(device), conv7.to(device)]
         output_basenet = [out_vgg]
 
         # Run auxiliary convolutions (higher level feature map generators)
-#        output_auxconv = self.model[1](conv7)
-#        output_auxconv = self.model[1](out_vgg)
-        output_auxconv = self.model[1](out_vgg)
-#        output_auxconv = self.model[1](out_vgg.view(out_vgg.size(0), -1)) #no hosvd
-        
-#        output_auxconv = torch.unsqueeze(torch.unsqueeze(output_auxconv, dim=-1), dim=-1) #no hosvd
-##        dim_kernel = int(np.sqrt(output_auxconv.size(1)))
-##        output_auxconv = output_auxconv.view(output_auxconv.size(0), dim_kernel, dim_kernel)
-##        output_auxconv = torch.unsqueeze(output_auxconv, dim=1)
+        output_auxconv = self.model[1](out_vgg) #hosvd
+#        output_auxconv = self.model[1](out_vgg.view(out_vgg.size(0), -1)) #pod
+#        output_auxconv = torch.unsqueeze(torch.unsqueeze(output_auxconv, dim=-1), dim=-1) #pod
         output_auxconv = [output_auxconv.to(device)]
         # Run prediction convolutions (predict offsets w.r.t prior-boxes and
         # classes in each resulting localization box)
