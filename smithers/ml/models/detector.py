@@ -110,7 +110,6 @@ class Detector(nn.Module):
             print('\nLoaded checkpoint from epoch %d.\n' % start_epoch)
             net = checkpoint['model']
             model = [net[i].to(device) for i in range(len(net))]
-            #model = [net[i].to(device) for i in range(len(net))]
             optimizer = checkpoint['optimizer']
 
         #Move to default device
@@ -175,7 +174,6 @@ class Detector(nn.Module):
         images = images.to(device)   #dtype = torch.Tensor
         # Run VGG base network convolutions (lower level feature map generators)
         conv4_3, conv7 = self.model[0](images)
-#        out_vgg = self.model[0](images)
 
         # Rescale conv4_3 (N, 512, 38, 38) after L2 norm
 #        norm = conv4_3.pow(2).sum(dim=1, keepdim=True).sqrt()  # (N, 1, 38, 38)
@@ -183,13 +181,11 @@ class Detector(nn.Module):
 #        conv4_3 = conv4_3 * self.rescale_factors  # (N, 512, 38, 38)
         # (PyTorch autobroadcasts singleton dimensions during arithmetic)
         output_basenet = [conv4_3.to(device), conv7.to(device)]
-#        output_basenet = [out_vgg]
+
 
         # Run auxiliary convolutions (higher level feature map generators)
         output_auxconv = self.model[1](conv7)
-#        output_auxconv = self.model[1](out_vgg)
-#        output_auxconv = self.model[1](out_vgg.view(out_vgg.size(0), -1)) 
-#        output_auxconv = torch.unsqueeze(torch.unsqueeze(output_auxconv, dim=-1), dim=-1)
+
 ##        dim_kernel = int(np.sqrt(output_auxconv.size(1)))
 ##        output_auxconv = output_auxconv.view(output_auxconv.size(0), dim_kernel, dim_kernel)
 ##        output_auxconv = torch.unsqueeze(output_auxconv, dim=1)
@@ -322,7 +318,6 @@ class Detector(nn.Module):
         # Save checkpoint
         print('Training (with evaluation) is now complete.')
         filename = 'checkpoint_ssd300.pth.tar'
-        #filename = f'./Results/{self.epochs}_{mode_list_batch[0]}_{mode_list_batch[1]}_{mode_list_batch[2]}_{mode_list_batch[3]}/checkpoint_ssd300.pth.tar'
         checkpoint_new = save_checkpoint_objdet(epoch, self.model, self.optimizer)#, filename)
         return checkpoint_new, loss_values, mAP_values  
 
@@ -714,7 +709,7 @@ class Reduced_Detector(Detector):
         output_auxconv = self.model[1](out_vgg) #hosvd
 #        output_auxconv = self.model[1](out_vgg.view(out_vgg.size(0), -1)) #pod
 #        output_auxconv = torch.unsqueeze(torch.unsqueeze(output_auxconv, dim=-1), dim=-1) #pod
-        output_auxconv = [output_auxconv.to(device)]
+
         # Run prediction convolutions (predict offsets w.r.t prior-boxes and
         # classes in each resulting localization box)
         locs, classes_scores = self.model[2](output_basenet, output_auxconv)

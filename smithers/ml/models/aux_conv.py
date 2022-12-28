@@ -39,7 +39,7 @@ class AuxiliaryConvolutions(nn.Module):
             extracted))
         """
         layers = []
-        in_channels = 1024  
+        in_channels = 1024
         #1280 number to be changed, put as param function
         for k in range(len(self.layers)):
             layers += [
@@ -61,7 +61,7 @@ class AuxiliaryConvolutions(nn.Module):
                 layers += [
                     nn.Conv2d(self.layers[k][0],
                               self.layers[k][1],
-                              kernel_size=3,#3, #1 change
+                              kernel_size=3, #1 change
                               padding=0)
                 ]
                 # dim. reduction because padding=0
@@ -90,11 +90,9 @@ class AuxiliaryConvolutions(nn.Module):
         :return list out_conv2: list containing higher-level feature maps
             conv8_2, conv9_2, conv10_2, and conv11_2
         """
-        out_in = conv7_feats ##aggiunto: [1]
-        #print(f'il tipo di out_in[0] è {type(out_in[0])}', flush = True)
+        out_in = conv7_feats
         out_conv2 = []
         for conv in self.features:
-            #print(f'il tipo di conv(out_in) è {type(conv(out_in))}, dovrebbe essere un tensore', flush = True)
             out = F.relu(conv(out_in))
             out_conv2.append(out)
             out_in = out

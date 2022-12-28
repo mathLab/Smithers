@@ -24,7 +24,6 @@ from smithers.ml.utils import get_seq_model, Total_param, Total_flops
 
 
 
-
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # Learning parameters
 batch_size = 8  # batch size
@@ -58,6 +57,7 @@ print('n_classes:', n_classes)
 data_folder = './'
 
 keep_difficult = True
+
 
 
 train_dataset = PascalVOCDataset(data_folder,
@@ -113,6 +113,7 @@ fmaps_dims = {'premodel': 38, 'projmodel': 1}
 obj_scales = {'premodel': 0.1, 'projmodel': 0.725} #0.9
 aspect_ratio = {'premodel': [1., 2., 0.5], 'projmodel': [1., 2., 3., 0.5, 0.333]}
 priors_cxcy = create_prior_boxes(fmaps_dims, obj_scales, aspect_ratio)
+print('dim', priors_cxcy.size())
 init_end = time()
 print('time needed to initialize the model', init_end - init_time)
 

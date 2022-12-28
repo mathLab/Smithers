@@ -92,6 +92,7 @@ class PredictionConvolutions(nn.Module):
             else:
                 raise RuntimeError(
                     'The task assigned is not recognized by the network.')
+
         return nn.Sequential(*layers)
 
     def init_conv2d(self):
