@@ -82,8 +82,7 @@ def create_data_lists(voc07_path, voc12_path, out_folder):
 
     # Training data
     for path in [voc07_path, voc12_path]:
-        #if path != '/u/s/szanin/Smithers/smithers/ml/tutorials/None':
-        if not path.endswith('/None'):# != '/u/s/szanin/Smithers/smithers/ml/tutorials/None':
+        if not path.endswith('/None'):
             # Find IDs of images in training data
             print(path)
             with open(os.path.join(path, 'ImageSets/Main/trainval.txt')) as f:

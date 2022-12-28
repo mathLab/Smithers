@@ -51,7 +51,6 @@ class Imagerec_Dataset(Dataset):
                                 self.img_data.loc[index, 'labels'],
                                 self.img_data.loc[index, 'Images'])
         image = Image.open(img_name)
-        #image = image.convert('RGB')
         image = image.resize((self.resize_dim[0], self.resize_dim[1]))
         label = torch.tensor(self.img_data.loc[index, 'encoded_labels'])
         if self.transform is not None:
@@ -62,7 +61,7 @@ class Imagerec_Dataset(Dataset):
 
     def getdata(self, index):
         '''
-	Function that returns a subset of the dataset 
+	Function that returns a subset of the dataset
         :param list index: number representing a specific image in the
             dataset
         :return: subset of the dataset composed by obs of type (img, label)
@@ -71,16 +70,5 @@ class Imagerec_Dataset(Dataset):
         output = []
         for idx in index:
             image, label = self.__getitem__(idx)
-            #img_name = os.path.join(self.img_path, self.img_data.loc[idx,
-            #                                                         'labels'],
-            #                        self.img_data.loc[idx, 'Images'])
-            #image = Image.open(img_name)
-            #image = image.convert('RGB')
-            #image = image.resize((self.resize_dim[0], self.resize_dim[1]))
-            #label = torch.tensor(self.img_data.loc[idx, 'encoded_labels'])
-            #if self.transform is not None:
-            #    image = self.transform(image)
-            #else:
-            #    image = transforms.ToTensor()(image)
             output.append([image, label])
         return output
