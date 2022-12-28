@@ -9,7 +9,6 @@ import torchvision.transforms.functional as FT
 import numpy as np
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-#device = torch.device('cpu')
 
 
 def decimate(tensor, m):
@@ -695,7 +694,6 @@ def adjust_learning_rate(optimizer, scale):
     print("DECAYING learning rate.\n The new LR is %f\n" %
           (optimizer.param_groups[-1]['lr'], ))
 
-    #NOTE: HERE INITIALLY WAS optimizer.param_groups[1]['lr'] (now -1)
 
 
 def non_max_sup(n_above_min_score, class_decoded_locs, overlap, max_overlap):
@@ -1117,4 +1115,3 @@ def calculate_mAP(det_boxes, det_labels, det_scores, true_boxes, true_labels,
     return average_precisions, mean_average_precision
 
 
-#https://towardsdatascience.com/implementation-of-mean-average-precision-map-with-non-maximum-suppression-f9311eb92522

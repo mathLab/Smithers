@@ -267,14 +267,14 @@ class Detector(nn.Module):
         # free some memory since their histories may be stored
         return loss.item()
 
-    def train_detector(self, label_map = None): 
+    def train_detector(self, label_map = None):
         '''
         Total training of the detector for all the epochs
         '''
         print('Training has started.')
         # Epochs
         loss_values = []
-        mAP_values = [] 
+        mAP_values = []
         for epoch in range(self.start_epoch, self.epochs):
 
             # Decay learning rate at particular epochs
@@ -284,10 +284,9 @@ class Detector(nn.Module):
             # One epoch's training
             loss_val = self.train_epoch(epoch=epoch)
             loss_values.extend([loss_val])
-            mAP_values.extend([10 * self.eval_detector(label_map, 'checkpoint_ssd300.pth.tar')]) 
-            if epoch%500 == 0: 
-                place_holder = save_checkpoint_objdet(epoch, self.model, self.optimizer, with_epochs = 'Yes') 
-                #save_checkpoint_objdet(epoch, self.model, self.optimizer, f'checkpoint_ssd300_epoch_{epoch}.pth.tar')
+            mAP_values.extend([10 * self.eval_detector(label_map, 'checkpoint_ssd300.pth.tar')])
+            if epoch%500 == 0:
+                place_holder = save_checkpoint_objdet(epoch, self.model, self.optimizer, with_epochs = 'Yes')
 
         # Save checkpoint
         print('Training is now complete.')
@@ -301,7 +300,7 @@ class Detector(nn.Module):
         print('Training (with evaluation) has started.')
         # Epochs
         loss_values = []
-        mAP_values = [] 
+        mAP_values = []
         for epoch in range(self.start_epoch, self.epochs):
 
             # Decay learning rate at particular epochs
@@ -311,15 +310,15 @@ class Detector(nn.Module):
             # One epoch's training
             loss_val = self.train_epoch(epoch=epoch)
             loss_values.extend([loss_val])
-            mAP_values.extend([10 * self.eval_current_detector(label_map)]) 
-            if epoch%500 == 0: 
-                place_holder = save_checkpoint_objdet(epoch, self.model, self.optimizer, with_epochs = 'Yes') 
+            mAP_values.extend([10 * self.eval_current_detector(label_map)])
+            if epoch%500 == 0:
+                place_holder = save_checkpoint_objdet(epoch, self.model, self.optimizer, with_epochs = 'Yes')
 
         # Save checkpoint
         print('Training (with evaluation) is now complete.')
         filename = 'checkpoint_ssd300.pth.tar'
         checkpoint_new = save_checkpoint_objdet(epoch, self.model, self.optimizer)#, filename)
-        return checkpoint_new, loss_values, mAP_values  
+        return checkpoint_new, loss_values, mAP_values
 
 
     def train_detector_with_eval_name(self, label_map, mode_list_batch = [], cutoff_idx = ''):
@@ -329,7 +328,7 @@ class Detector(nn.Module):
         print('Training (with evaluation) has started.')
         # Epochs
         loss_values = []
-        mAP_values = [] 
+        mAP_values = []
         for epoch in range(self.start_epoch, self.epochs):
 
             # Decay learning rate at particular epochs
@@ -339,11 +338,11 @@ class Detector(nn.Module):
             # One epoch's training
             loss_val = self.train_epoch(epoch=epoch)
             loss_values.extend([loss_val])
-            mAP_values.extend([10 * self.eval_current_detector(label_map)]) 
-            if epoch%500 == 0 and len(mode_list_batch) >0: 
+            mAP_values.extend([10 * self.eval_current_detector(label_map)])
+            if epoch%500 == 0 and len(mode_list_batch) >0:
                 filename = f'./Results/{self.epochs}_{mode_list_batch[0]}_{mode_list_batch[1]}_{mode_list_batch[2]}_{mode_list_batch[3]}_cut{str(cutoff_idx)}/checkpoint_ssd300_epoch_{epoch}.pth.tar'
                 placeholder = save_checkpoint_objdet_name(epoch, self.model, self.optimizer, filename)
-            elif epoch%500 == 0 and len(mode_list_batch) == 0: 
+            elif epoch%500 == 0 and len(mode_list_batch) == 0:
                 filename = f'checkpoint_ssd300_epoch_{epoch}.pth.tar'
                 placeholder = save_checkpoint_objdet_name(epoch, self.model, self.optimizer, filename)
         # Save checkpoint
@@ -351,7 +350,7 @@ class Detector(nn.Module):
         #filename = 'checkpoint_ssd300.pth.tar'
         filename = f'./Results/{self.epochs}_{mode_list_batch[0]}_{mode_list_batch[1]}_{mode_list_batch[2]}_{mode_list_batch[3]}_cut{str(cutoff_idx)}/checkpoint_ssd300.pth.tar'
         checkpoint_new = save_checkpoint_objdet_name(epoch, self.model, self.optimizer, filename)
-        return checkpoint_new, loss_values, mAP_values  
+        return checkpoint_new, loss_values, mAP_values
 
     def eval_detector(self, label_map, checkpoint):
         '''
@@ -403,9 +402,6 @@ class Detector(nn.Module):
                 predicted_locs, predicted_scores = self.forward(images)
 
                 # Detect objects in SSD output
-#                print('priors:', self.priors.size())
-#                print('predicted_locs', predicted_locs.size())
-#                print('predicted_scores', predicted_scores.size())
                 det_boxes_batch, det_labels_batch, det_scores_batch = detect_objects(
                     self.priors,
                     predicted_locs,
@@ -439,7 +435,7 @@ class Detector(nn.Module):
         pp.pprint(APs)
 
         print('\nMean Average Precision (mAP): %.3f' % mAP)
-        return mAP 
+        return mAP
 
     def eval_current_detector(self, label_map):
         '''

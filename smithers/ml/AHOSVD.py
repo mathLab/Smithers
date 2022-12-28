@@ -24,7 +24,7 @@ class AHOSVD():
         self.batch_len = batch_len
         self.u_matrices = []
         self.proj_matrices = []
-    
+
     def _incremental_average(self, current_list, new_list, index):
         """
         Auxiliary function used to compute the incremental step for a list containing already computed
@@ -44,7 +44,7 @@ class AHOSVD():
             return matrices_list
         elif index < 0:
             raise ValueError('Index variable must be greater or equal to 0.')
-    
+
     def _partial_HOSVD(self, batch_from_tensor):
         """
         Computes the partial HOSVD from a restricted sample of the snapshots tensor
@@ -87,17 +87,17 @@ class AHOSVD():
         incr_list = [i for i in range(len(tensor.shape))]
         incr_list.reverse()
         return torch.permute(tensor, tuple(incr_list))
-    
+
     def project_single_observation(self, observation_tensor):
         for i, _ in enumerate(observation_tensor.shape):
             observation_tensor = torch.tensordot(self.proj_matrices[i], observation_tensor, ([1],[i]))
         return self.tensor_reverse(observation_tensor)
-    
+
     def project_multiple_observations(self, observations_tensor):
         for i in range(len(self.proj_matrices)):
             observations_tensor = torch.tensordot(self.proj_matrices[i], observations_tensor, ([1],[i+1]))
         return self.tensor_reverse(observations_tensor)
-    
+
 
 # example
 if __name__ == '__main__':
