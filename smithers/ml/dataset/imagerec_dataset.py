@@ -21,7 +21,7 @@ class Imagerec_Dataset(Dataset):
         images
     :param transform_obj transform: list of transoforms to apply to
         images. Defaul value set to None.
-    :param list resize_dim: list of integers corresponding to the 
+    :param list resize_dim: list of integers corresponding to the
         size to which we want to resize the images
     '''
     def __init__(self, img_data, img_path, resize_dim, transform=None):

@@ -45,6 +45,9 @@ def select_indeces(valid_classes, max_imgs, xmlfolder):
     return valid_ids
 
 def copy_imgs(ids, src, dst, folder='JPEGImages'):
+    '''
+    Function copying selected images from a directory.
+    '''
 
     os.mkdir(os.path.join(dst, folder))
 
@@ -54,6 +57,9 @@ def copy_imgs(ids, src, dst, folder='JPEGImages'):
         shutil.copyfile(src_, dst_)
 
 def copy_xmls(ids, src, dst, folder='Annotations'):
+    '''
+    Function copying selected xml files from a directory.
+    '''
 
     os.mkdir(os.path.join(dst, folder))
 
@@ -71,9 +77,7 @@ def sample_dataset(src_dataset, dst_dataset):
     '''
     os.mkdir(dst_dataset)
 
-#    ids = select_indeces(['bottle'], 260, os.path.join(src_dataset, 'Annotations'))
-    ids = select_indeces( ['dog', 'cat'], #['cow'],
-                         300,
+    ids = select_indeces(['dog', 'cat'], 300,
                          os.path.join(src_dataset, 'Annotations'))
 
     copy_imgs(ids, src_dataset, dst_dataset)

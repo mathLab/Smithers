@@ -9,7 +9,8 @@ import os
 parser = argparse.ArgumentParser()
 parser.add_argument("voc07_path", help="Path to VOC2007 folder", type=str)
 parser.add_argument("voc12_path", help="Path to VOC2012 folder")
-parser.add_argument("output_folder", help="Path to JSON output folder", type=str)
+parser.add_argument("output_folder", help="Path to JSON output folder",
+                    type=str)
 args = parser.parse_args()
 
 voc07_path = args.voc07_path
@@ -95,7 +96,8 @@ def create_data_lists(voc07_path, voc12_path, out_folder):
                     continue
                 n_objects += len(objects)
                 train_objects.append(objects)
-                train_images.append(os.path.join(path, 'JPEGImages', ID + '.jpg'))
+                train_images.append(os.path.join(path, 'JPEGImages', ID +
+                                                 '.jpg'))
 
     assert len(train_objects) == len(train_images)
 
@@ -108,9 +110,9 @@ def create_data_lists(voc07_path, voc12_path, out_folder):
         json.dump(label_map, j)  # save label map too
 
     print(
-        '\nThere are %d training images containing a total of %d objects.\
-        Files have been saved to %s.'                                                                                                                                                                                          % (len(train_images), n_objects,\
-        os.path.abspath(out_folder)))
+        '\nThere are %d training images containing a total of %d \
+         objects. Files have been saved to %s.'
+        %(len(train_images), n_objects, os.path.abspath(out_folder)))
 
     # Test data
     test_images = list()
@@ -141,9 +143,9 @@ def create_data_lists(voc07_path, voc12_path, out_folder):
         json.dump(test_objects, j)
 
     print(
-        '\nThere are %d test images containing a total of %d objects.\
-        Files have been saved to    %s.'                                                                                                                                                                                   % (len(test_images), n_objects,\
-        os.path.abspath(out_folder)))
+        '\nThere are %d test images containing a total of %d \
+        objects. Files have been saved to %s.'
+        % (len(test_images), n_objects, os.path.abspath(out_folder)))
 
 
 create_data_lists(voc07_path, voc12_path, output_folder)

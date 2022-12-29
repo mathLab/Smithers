@@ -4,9 +4,9 @@ Module focused on the implementation of VGG.
 import torch
 import torch.nn as nn
 import torchvision
-from smithers.ml.utils import save_checkpoint
 
-from smithers.ml.utils import decimate
+from smithers.ml.models.utils_imagerec import decimate
+
 if torch.cuda.is_available():
     device = torch.device('cuda')
 else:
@@ -47,21 +47,16 @@ class VGG(nn.Module):
           Otherwise if is a sequential container, the classifier correspond
           exactly to this.
      :param int num_classes: number of classes in your dataset.
-     :param bool init_weights: If True, the weights must be inizialized,
-          otherwise weights pretrained on a particular dataset (Imagenet,
-          CIFAR10, a custom one,..) are loaded from the file given in
-          pretrain_weights.
-     :param str pretrain_weights: path to the file containing the pretrained
-          weights. Default value is None. For more details on the structure
-          required for the checkpoint file, see 'save_checkpoint' in utils.py
+     :param str init_weights: If 'random', the weights are inizialized
+          following standard random distributins. If 'imagenet', pre-trained
+          weights on ImageNet are loaded.
     '''
     def __init__(self,
                  cfg=None,
                  classifier='standard',
                  batch_norm=False,
                  num_classes=1000,
-                 init_weights=True,
-                 pretrain_weights=None):
+                 init_weights='random'):
         super(VGG, self).__init__()
 
         self.num_classes = num_classes
@@ -101,11 +96,13 @@ class VGG(nn.Module):
             self.classifier = available_classifier.get(classifier)
         else:
             self.classifier = classifier
-        self.pretrain_weights = pretrain_weights
-        if init_weights:
+        if init_weights == 'random':
             self._initialize_weights()
-        else:
+        elif init_weights == 'imagenet':
             self.load_pretrained_layers(cfg)
+        else:
+            raise RuntimeError(
+                'Invalid choice for the initialization of the weigths.')
 
     def make_layers(self, batch_norm=False):
         '''
@@ -166,7 +163,10 @@ class VGG(nn.Module):
         elif self.classifier_str == 'cifar':
             x = torch.flatten(x, 1)
         x = self.classifier(x)
-        return conv4_3, x
+        if self.classifier_str == 'ssd':
+            return conv4_3, x
+        else:
+            return x
 
     def _initialize_weights(self):
         '''
@@ -219,15 +219,10 @@ class VGG(nn.Module):
         state_dict = self.state_dict()
         param_names = list(state_dict.keys())
 
-        if self.pretrain_weights is None:
-            pretrained_net = torchvision.models.vgg16(pretrained=True)
-        else:
-            pretrained_net = torch.load(self.pretrain_weights,
-                                        torch.device(device))
-           # pretrained_net = pretrained_net['model']
+        pretrained_net = torchvision.models.vgg16(pretrained=True)
         pretrained_state_dict = pretrained_net.state_dict()
         pretrained_param_names = list(pretrained_state_dict.keys())
-        #print(param_names)
+
 
         if cfg is None and (self.classifier_str == 'standard'
                             or self.classifier_str == 'cifar'):

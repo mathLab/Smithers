@@ -43,9 +43,9 @@ class FNN(nn.Module):
             layers = [inner_size] * n_layers
 
         tmp_layers = layers.copy()
-        tmp_layers.insert(0, self.n_input) #MODIF era su PINA ma non sul codice di Laura
-        tmp_layers.append(self.n_output) # MODIF era: tmp_layers.append(self.n_output_dimension)
-        #tmp_layers[0] = self.n_input #aggiunta con Laura
+        tmp_layers.insert(0, self.n_input)
+        tmp_layers.append(self.n_output)
+        #tmp_layers[0] = self.n_input
 
 
         self.layers = []
@@ -56,8 +56,8 @@ class FNN(nn.Module):
             self.functions = func
         else:
             self.functions = [func for _ in range(len(self.layers)-1)]
-        
-        if len(self.layers) != len(self.functions) + 1:                         #MODIF: aggiunto questo pezzo
+
+        if len(self.layers) != len(self.functions) + 1:
             raise RuntimeError('uncosistent number of layers and functions')
 
 
@@ -102,13 +102,11 @@ def training_fnn(fnn_net, epochs, inputs_net, real_out):
     correct = 0
     total = 0
 
-    fnn_net = fnn_net.to(device) #MODIF (prima non c'era)
-    inputs_net = inputs_net.to(device) #MODIF (prima non c'era)
-    #real_out = real_out.to(device) #MODIF (prima non c'era)
-    for i in range(len(real_out)): #MODIF
-        real_out[i] = real_out[i].to(device) #MODIF
-    #temporary_tensor_real_out = torch.Tensor(len(real_out)).to(device)
-    #torch.cat(real_out, out=temporary_tensor_real_out)
+    fnn_net = fnn_net.to(device)
+    inputs_net = inputs_net.to(device)
+    #real_out = real_out.to(device)
+    for i in range(len(real_out)):
+        real_out[i] = real_out[i].to(device)
 
     final_loss = []
     batch_size = 128
@@ -121,10 +119,10 @@ def training_fnn(fnn_net, epochs, inputs_net, real_out):
 
             # forward + backward + optimize
             outputs = fnn_net((inputs_net[i * batch_size:(i + 1) *
-                                         batch_size, :]).to(device)) #MODIF
+                                         batch_size, :]).to(device))
             loss = criterion(
                 outputs,
-                torch.cuda.LongTensor(real_out[i * batch_size:(i + 1) * #MODIF
+                torch.cuda.LongTensor(real_out[i * batch_size:(i + 1) *
                                           batch_size]))#,device))
             loss.backward(retain_graph=True)
             optimizer.step()
@@ -133,13 +131,13 @@ def training_fnn(fnn_net, epochs, inputs_net, real_out):
             running_loss += loss.item()
             if i % 500 == 0:  # print every 500 mini-batches
                 #print('[%d, %5d] loss: %.6f' %
-                      #(epoch + 1, i + 1, running_loss / 50), flush=True)   # MODIF rimosso il print
+                      #(epoch + 1, i + 1, running_loss / 50), flush=True)
                 if i == inputs_net.size()[0] // batch_size - 1:
                     final_loss.append(running_loss / 50)
                 running_loss = 0.0
 
             _, predicted = torch.max(outputs.data, 1)
-            labels = torch.cuda.LongTensor(real_out[i * batch_size:(i + 1) * #MODIF
+            labels = torch.cuda.LongTensor(real_out[i * batch_size:(i + 1) *
                                                batch_size])
             total += labels.size(0)
 

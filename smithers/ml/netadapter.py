@@ -10,8 +10,8 @@ import numpy as np
 from smithers.ml.rednet import RedNet
 from smithers.ml.fnn import FNN, training_fnn
 from smithers.ml.tensor_product_layer import tensor_product_layer
-from smithers.ml.utils import PossibleCutIdx, spatial_gradients, forward_dataset, projection, forward_dataset_AHOSVD
-from smithers.ml.utils import randomized_svd
+from smithers.ml.utils_rednet import PossibleCutIdx, spatial_gradients, forward_dataset, projection, forward_dataset_AHOSVD
+from smithers.ml.utils_rednet import randomized_svd
 from smithers.ml.AHOSVD import AHOSVD
 from smithers.ml.pcemodel import PCEModel
 

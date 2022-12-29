@@ -3,7 +3,6 @@ Utilities to perform changes inside xml files.
 '''
 
 from __future__ import print_function
-from sys import argv
 from os import listdir, path
 import re
 
@@ -84,21 +83,21 @@ def change_xml(nome_file):
         files = listdir(nome_file)
         for file in files:
             file_path = path.join(nome_file, file)
-            file_name, file_ext = path.splitext(file)
+            _, file_ext = path.splitext(file)
             if file_ext.lower() == '.xml':
-                with open(file_path,'r') as f:
-                        rows = f.readlines()
+                with open(file_path, 'r') as f:
+                    rows = f.readlines()
 
                 new_file = resize_file(rows)
-                with open(file_path,'w') as f:
+                with open(file_path, 'w') as f:
                     f.write(new_file)
     else:
         # otherwise i have a file (hopefully)
-        with open(nome_file,'r') as f:
+        with open(nome_file, 'r') as f:
             rows = f.readlines()
 
         new_file = resize_file(rows)
-        with open(nome_file,'w') as f:
+        with open(nome_file, 'w') as f:
             f.write(new_file)
 
 #insert name of the xml file or directory that contains them
