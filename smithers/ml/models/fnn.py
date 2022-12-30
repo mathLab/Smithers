@@ -98,13 +98,12 @@ def training_fnn(fnn_net, epochs, inputs_net, real_out):
         of the network.
     '''
     criterion = nn.CrossEntropyLoss().to(device)
-    optimizer = optim.Adam(fnn_net.parameters(), lr=0.0001)#MODIF
+    optimizer = optim.Adam(fnn_net.parameters(), lr=0.0001)
     correct = 0
     total = 0
 
     fnn_net = fnn_net.to(device)
     inputs_net = inputs_net.to(device)
-    #real_out = real_out.to(device)
     for i in range(len(real_out)):
         real_out[i] = real_out[i].to(device)
 
@@ -112,7 +111,6 @@ def training_fnn(fnn_net, epochs, inputs_net, real_out):
     batch_size = 128
     print('FNN training initialized')
     for epoch in range(epochs):  # loop over the dataset multiple times
-        running_loss = 0.0
         for i in range(inputs_net.size()[0] // batch_size):
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -122,23 +120,15 @@ def training_fnn(fnn_net, epochs, inputs_net, real_out):
                                          batch_size, :]).to(device))
             loss = criterion(
                 outputs,
-                torch.cuda.LongTensor(real_out[i * batch_size:(i + 1) *
-                                          batch_size]))#,device))
+                torch.LongTensor(real_out[i * batch_size:(i + 1) *
+                                          batch_size]).to(device))
             loss.backward(retain_graph=True)
             optimizer.step()
 
-            # print statistics
-            running_loss += loss.item()
-            if i % 500 == 0:  # print every 500 mini-batches
-                #print('[%d, %5d] loss: %.6f' %
-                      #(epoch + 1, i + 1, running_loss / 50), flush=True)
-                if i == inputs_net.size()[0] // batch_size - 1:
-                    final_loss.append(running_loss / 50)
-                running_loss = 0.0
 
             _, predicted = torch.max(outputs.data, 1)
-            labels = torch.cuda.LongTensor(real_out[i * batch_size:(i + 1) *
-                                               batch_size])
+            labels = torch.LongTensor(real_out[i * batch_size:(i + 1) *
+                                               batch_size]).to(device)
             total += labels.size(0)
 
             correct += (predicted == labels).sum().item()

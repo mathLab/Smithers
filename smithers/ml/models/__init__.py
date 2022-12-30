@@ -11,4 +11,6 @@ from smithers.ml.models.aux_conv import AuxiliaryConvolutions
 from smithers.ml.models.predictor import PredictionConvolutions
 from smithers.ml.models.multibox_loss import MultiBoxLoss
 from smithers.ml.models.detector import Detector
-from smithers.ml.models.utils import *
+from smithers.ml.models.utils_imagerec import *
+from smithers.ml.models.hosvd import HOSVD
+from smithers.ml.models.ahosvd import AHOSVD

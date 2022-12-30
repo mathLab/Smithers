@@ -1,5 +1,5 @@
 '''
-Module focused on the reduction of the ANN and implementaion of the
+Module focused on the reduction of the ANN and implementation of the
 training and testing phases.
 '''
 
@@ -8,12 +8,12 @@ import torch.nn as nn
 import numpy as np
 
 from smithers.ml.rednet import RedNet
-from smithers.ml.fnn import FNN, training_fnn
+from smithers.ml.models.fnn import FNN, training_fnn
 from smithers.ml.tensor_product_layer import tensor_product_layer
-from smithers.ml.utils_rednet import PossibleCutIdx, spatial_gradients, forward_dataset, projection, forward_dataset_AHOSVD
-from smithers.ml.utils_rednet import randomized_svd
-from smithers.ml.AHOSVD import AHOSVD
-from smithers.ml.pcemodel import PCEModel
+from smithers.ml.models.utils_rednet import PossibleCutIdx, spatial_gradients, forward_dataset, projection, tensor_projection
+from smithers.ml.models.utils_rednet import randomized_svd
+from smithers.ml.models.ahosvd import AHOSVD
+from smithers.ml.models.pcemodel import PCEModel
 
 #from ATHENA.athena.active import ActiveSubspaces
 
@@ -30,12 +30,14 @@ class NetAdapter():
     def __init__(self, cutoff_idx, red_dim, red_method, inout_method):
         '''
         :param int cutoff_idx: value that identifies the cut-off layer
-        :param int red_dim: dimension of the reduced space onto which we
-            project the high-dimensional vectors
+        :param int/list red_dim: dimension of the reduced space onto which we
+            project the high-dimensional vectors or list of the reduced
+            dimensions for each direction in the tensorial space under
+            consideration.
         :param str red_method: string that identifies the reduced method to
-            use, e.g. 'AS', 'POD'
+            use, e.g. 'AS', 'POD'. 'AHOSVD'.
         :param str inout_method: string the represents the technique to use for
-            the identification of the input-output map, e.g. 'PCE', 'ANN'
+            the identification of the input-output map, e.g. 'PCE', 'FNN'.
 
         :Example:
 
@@ -50,7 +52,11 @@ class NetAdapter():
         '''
 
         self.cutoff_idx = cutoff_idx
-        self.red_dim = red_dim
+        if isinstance(red_dim, list):
+            self.red_dim_list = red_dim
+            self.red_dim = np.prod(red_dim)
+        else:
+            self.red_dim = red_dim
         self.red_method = red_method
         self.inout_method = inout_method
 
@@ -103,25 +109,51 @@ class NetAdapter():
         u, _, _ = randomized_svd(torch.transpose(matrix_features, 0, 1), self.red_dim)
         return u
 
-    def _reduce_HOSVD(self, tensor_features, mode_list_batch): 
+    def _reduce_HOSVD(self, model, data_loader, device): 
         '''
-        Function that performs the reduction using the Higher order SVD (RandSVD).
-        :param torch.Tensor matrix_features: (n_images x n_feat) matrix
-            containing the output of the pre-model that needs to be reduced.
-        :returns: tensor proj_mat representing the projection matrix
-            obtained via RandSVD (n_feat x red_dim).
-        :rtype: torch.Tensor
-        '''
-        ahosvd = AHOSVD(tensor_features, mode_list_batch, mode_list_batch[0])
-        ahosvd.compute_u_matrices()
-        ahosvd.compute_proj_matrices()
-        return ahosvd.proj_matrices, ahosvd
-    
+        Function that performs the reduction using the Higher
+        order SVD (HOSVD) and in particular its averaged version (AHOSVD).
 
-    def _reduce(self, pre_model, post_model, train_dataset, train_loader, device = device, mode_list_batch = None):
+        :param nn.Module/torch.Tensor model: model under consideration for
+           computing its outputs (that has to be reduced) or 
+           (n_images x n_channel x H x W) tensor containing the output of
+           the pre-model (in its tensorial version) that needs to be reduced.
+        :param torch.device device: device used to allocate the variables for
+            the function.
+        :returns: list containing the projection matrices obtained via HOSVD
+            for each dimension of the tensor (excluded the one related to the
+            batch of images).
+        :rtype: list
+        '''
+        batch_hosvd = 4
+        batch_old = 0
+        ahosvd = AHOSVD(torch.zeros(0), self.red_dim_list, batch_hosvd)
+        for idx_, batch in enumerate(data_loader):
+            images = batch[0].to(device)
+        
+            with torch.no_grad():
+                if torch.is_tensor(model):
+                    outputs = out[batch_old : batch_old + images.size()[0], : ]
+                    batch_old = images.size()[0]
+                else:
+                    outputs = model(images).to(device)
+                ahosvd_temp = AHOSVD(outputs, self.red_dim_list, batch_hosvd)
+                ahosvd_temp.compute_u_matrices()
+                ahosvd_temp.compute_proj_matrices()                
+
+                ahosvd.proj_matrices = ahosvd.incremental_average(ahosvd.proj_matrices,
+                                                                  ahosvd_temp.proj_matrices,
+                                                                  idx_)
+                del ahosvd_temp
+                del outputs
+                #torch.cuda.empty_cache()
+        return ahosvd.proj_matrices
+
+    
+    def _reduce(self, pre_model, post_model, train_dataset, train_loader, device = device):
         '''
         Function that performs the reduction of the high dimensional
-        output of the pre-model
+        output of the pre-model.
         :param nn.Sequential pre_model: sequential model representing
             the pre-model.
         :param nn.Sequential post_model: sequential model representing
@@ -143,85 +175,30 @@ class NetAdapter():
             #code for AS
             matrix_features = forward_dataset(pre_model, train_loader).to(device)
             proj_mat = self._reduce_AS(pre_model, post_model, train_dataset)
-            snapshots_red = projection(proj_mat, train_loader, matrix_features)
+            matrix_red = projection(proj_mat, train_loader, matrix_features)
 
         elif self.red_method == 'POD':
             #code for POD
             matrix_features = forward_dataset(pre_model, train_loader).to(device)
             proj_mat = self._reduce_POD(matrix_features)
-            snapshots_red = projection(proj_mat, train_loader, matrix_features)
+            matrix_red = projection(proj_mat, train_loader, matrix_features)
 
         elif self.red_method == 'RandSVD': 
             #code for RandSVD
             matrix_features = forward_dataset(pre_model, train_loader).to(device)
             proj_mat = self._reduce_RandSVD(matrix_features)
-            snapshots_red = projection(proj_mat, train_loader, matrix_features)
+            matrix_red = projection(proj_mat, train_loader, matrix_features)
 
         elif self.red_method == 'HOSVD': 
             #code for HOSVD
-            tensor_features = forward_dataset(pre_model, train_loader, flattening = False).to(device)
-            proj_mat, ahosvd = self._reduce_HOSVD(tensor_features, mode_list_batch)
-            snapshots_red = ahosvd.project_multiple_observations(tensor_features)
-            # uncomment to get the shape of the reduced snapshots tensor
-            # print(f"La shape di tensor_red è {snapshots_red.shape}", flush = True)
-            snapshots_red = torch.squeeze(snapshots_red.flatten(1)).detach()
-            
+            #tensor_features = forward_dataset(pre_model, train_loader, flattening = False).to(device)
+            proj_mat = self._reduce_HOSVD(pre_model, train_loader, device)
+            matrix_red = tensor_projection(proj_mat, train_loader, pre_model, device)
 
         else:
             raise ValueError
 
-        return snapshots_red, proj_mat
-    
-    def _reduce_new(self, pre_model, post_model, train_dataset, train_loader, device = device, mode_list_batch = None):
-        '''
-        Function that performs the reduction of the high dimensional
-        output of the pre-model
-        :param nn.Sequential pre_model: sequential model representing
-            the pre-model.
-        :param nn.Sequential post_model: sequential model representing
-            the pre-model.
-        :param Dataset train_dataset: dataset containing the training
-            images.
-        :param iterable train_loader: iterable object for loading the dataset.
-            It iterates over the given dataset, obtained combining a
-            dataset(images and labels) and a sampler.
-        :param torch.device device: object representing the device on
-            which a torch.Tensor is or will be allocated.
-        :returns: tensors matrix_red and proj_mat containing the reduced output
-            of the pre-model (n_images x red_dim) and the projection matrix
-            (n_feat x red_dim) respectively.
-        :rtype: torch.tensor
-    	'''
-
-        if self.red_method == 'AS':
-            #code for AS
-            matrix_features = forward_dataset(pre_model, train_loader).to(device)
-            proj_mat = self._reduce_AS(pre_model, post_model, train_dataset)
-            snapshots_red = projection(proj_mat, train_loader, matrix_features)
-
-        elif self.red_method == 'POD':
-            #code for POD
-            matrix_features = forward_dataset(pre_model, train_loader).to(device)
-            proj_mat = self._reduce_POD(matrix_features)
-            snapshots_red = projection(proj_mat, train_loader, matrix_features)
-
-        elif self.red_method == 'RandSVD': 
-            #code for RandSVD
-            matrix_features = forward_dataset(pre_model, train_loader).to(device)
-            proj_mat = self._reduce_RandSVD(matrix_features)
-            snapshots_red = projection(proj_mat, train_loader, matrix_features)
-
-        elif self.red_method == 'HOSVD': 
-            #code for HOSVD
-            snapshots_red, proj_mat, _ = forward_dataset_AHOSVD(pre_model, train_loader, mode_list_batch, device = device)
-            #proj_mat, ahosvd = self._reduce_HOSVD(tensor_features, mode_list_batch)
-            #snapshots_red = ahosvd.project_multiple_observations(tensor_features)
-            #snapshots_red = torch.squeeze(snapshots_red.flatten(1)).detach()
-
-        else:
-            raise ValueError
-
-        return snapshots_red, proj_mat
+        return matrix_red, proj_mat
 
     def _inout_mapping_FNN(self, matrix_red, train_labels, n_class):
         '''
@@ -237,7 +214,6 @@ class NetAdapter():
         :rtype: nn.Module
         '''
         n_neurons = 20
-        print(f'train lables è di tipo {type(train_labels)}\nEsplicitamente, {train_labels}') #MODIF
         targets = list(train_labels)
         fnn = FNN(self.red_dim, n_class, n_neurons).to(device)
         epochs = 500
@@ -303,7 +279,9 @@ class NetAdapter():
             #code for PCE
             inout_map = self._inout_mapping_PCE(matrix_red, out_model, train_loader, train_labels)
         
-        elif self.inout_method == 'None' or self.inout_method == None: # used for object detection
+        elif self.inout_method == None: 
+            # In the case of object detection, we do not need this input_output part, since the
+            # predictor is unchanged w.r.t. the original input network.
             inout_map = nn.Identity()
 
         else:
@@ -312,7 +290,7 @@ class NetAdapter():
         return inout_map
 
     def reduce_net(self, input_network, train_dataset, train_labels,
-                   train_loader, n_class, device = device, mode_list_batch = [25, 35, 3, 3]):
+                   train_loader, n_class, device = device):
         '''
         Function that performs the reduction of the network
         :param nn.Sequential input_network: sequential model representing
@@ -332,16 +310,14 @@ class NetAdapter():
         :return: reduced net
         :rtype: nn.Module
         '''
-        print('Initializing reduction. Chosen reduction method is: '+self.red_method, flush=True)
         input_type = train_dataset.__getitem__(0)[0].dtype
         possible_cut_idx = PossibleCutIdx(input_network)
         cut_idxlayer = possible_cut_idx[self.cutoff_idx]
         pre_model = input_network[:cut_idxlayer].to(device, dtype=input_type)
         post_model = input_network[cut_idxlayer:].to(device, dtype=input_type)
+        snapshots_red, proj_mat = self._reduce(pre_model, post_model, train_dataset, train_loader, device)
         if self.inout_method == 'PCE':
             out_model = forward_dataset(input_network, train_loader)
-        snapshots_red, proj_mat = self._reduce_new(pre_model, post_model, train_dataset, train_loader, device, mode_list_batch)
-        if self.inout_method == 'PCE':
             inout_map = self._inout_mapping(snapshots_red, n_class, out_model, train_labels, train_loader)
         else:
             inout_map = self._inout_mapping(snapshots_red, n_class, None, train_labels, train_loader)

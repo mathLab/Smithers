@@ -52,12 +52,11 @@ def train(net, num_epochs, train_loader, test_loader, optim_str, device):
         optimizer = optim.Adam(net.parameters(), lr=0.001)
 
     net.to(device)
-
+    batch_size = train_loader.batch_size()
     for epoch in range(num_epochs):  # loop over the dataset multiple times
         running_loss = 0.0
 
         for i, (images, labels) in enumerate(train_loader, 0):
-            batch_size = images.size()[0]
             images = images.to(device)
             labels = labels.to(device)
             # zero the parameter gradients

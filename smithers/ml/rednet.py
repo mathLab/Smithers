@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from smithers.ml.tensor_product_layer import tensor_product_layer
 
-if torch.cuda.is_available(): #MODIF tutto il pezzo
+if torch.cuda.is_available():
     device = torch.device('cuda')
 else:
     device = torch.device('cpu')
@@ -41,7 +41,7 @@ class RedNet(nn.Module):
             self.premodel = premodel
             if isinstance(proj_mat, nn.Linear):
                 self.proj_model = proj_mat
-            elif isinstance(proj_mat, tensor_product_layer): #Aggiunto per AHOSVD
+            elif isinstance(proj_mat, tensor_product_layer):
                 self.proj_model = proj_mat
             else:
                 self.proj_model = nn.Linear(proj_mat.size()[0],
