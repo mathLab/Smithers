@@ -296,16 +296,17 @@ def Total_param(model, storage_per_param=4):
         total_params += np.prod(t.data.cpu().numpy().shape)
     return total_params / 2**20 * storage_per_param
 
-def Total_flops(model, device, is_ASNet=False, p=2, nAS=50):
+def Total_flops(model, device, is_PCE=False, p=2, red_dim=50):
     '''
     Function that computes the total number of flops
 
     :param nn.Module model: part of the net in exam
     :param torch.device device: object representing the device on
         which a torch.Tensor is or will be allocated.
-    :param bool is_ASNet: Default value set at False.
-    :param int p:
-    :param int nAS: number of active neurons. Default value is
+    :param bool is_PCE: Boolean value identifying the use of PCE
+        as input_ouput mapping. Default value set at False.
+    :param int p: degree polynomial used in PCE.
+    :param int red_dim: reduction dimension. Default value is
         set at 50.
     :return: total number of flops
     :rtype: float
@@ -323,7 +324,7 @@ def Total_flops(model, device, is_ASNet=False, p=2, nAS=50):
         if isinstance(m, nn.Linear):
             flops += m.in_features * m.out_features
 
-    if is_ASNet:
+    if is_PCE:
         flops += p * (model.PCE.in_features + nAS)  #Basis function
     return float(flops) / 10**6
 
@@ -368,13 +369,12 @@ def compute_loss(model, device, test_loader, is_print=True, topk=[1], features=N
                 correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
                 res.append(correct_k)
     test_loss /= len(test_loader.sampler)
-    print('Test Loss', test_loss / len(test_loader.sampler))
     correct = torch.FloatTensor(res).view(-1, len(topk)).sum(dim=0)
     test_accuracy = 100. * correct / len(test_loader.sampler)
     for idx, k in enumerate(topk):
         print(' Top {}:  Accuracy: {}/{} ({:.2f}%)'.format(
             k, correct[idx], len(test_loader.sampler), test_accuracy[idx]))
-        print('Test Loss:', test_loss)
+        print('Loss Value:', test_loss)
     if len(topk) == 1:
         return test_accuracy[0]
     else:
@@ -397,15 +397,15 @@ def train_kd(student,
     :param nn.Module student: reduced net
     :param nn.Module teacher: full net
     :param torch.device device: object representing the device on
-        which a torch.Tensor is or will be allocated.    
+        which a torch.Tensor is or will be allocated.
     :param iterable train_loader: iterable object, it load the dataset for
         training. It iterates over the given dataset, obtained combining a
         dataset(images and labels) and a sampler.
     :param optimizer
     :param train_max_batch
-    :param float alpha: regularization parameter. Default value set to 0.0, 
+    :param float alpha: regularization parameter. Default value set to 0.0,
         i.e. when the training is reduced to the original one
-    :param float temperature: temperature factor introduced. When T tends to 
+    :param float temperature: temperature factor introduced. When T tends to
         infinity all the classes have the same probability, whereas when T
         tends to 0 the targets become one-hot labels. Default value set to 1.
     :param lr_decrease:
