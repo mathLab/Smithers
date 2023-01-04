@@ -13,7 +13,7 @@ from tqdm import tqdm
 from PIL import ImageDraw, ImageFont
 
 from smithers.ml.models.multibox_loss import MultiBoxLoss
-from smithers.ml.models.utils import AverageMeter, clip_gradient, adjust_learning_rate, detect_objects, calculate_mAP, save_checkpoint_objdet, save_checkpoint_objdet_name
+from smithers.ml.models.utils_objdet import AverageMeter, clip_gradient, adjust_learning_rate, detect_objects, calculate_mAP, save_checkpoint_objdet, save_checkpoint_objdet_name
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -112,10 +112,7 @@ class Detector(nn.Module):
             model = [net[i].to(device) for i in range(len(net))]
             optimizer = checkpoint['optimizer']
 
-        #Move to default device
-
-
-#        model = model.to(device)
+        model = model.to(device)
         return start_epoch, model, optimizer
 
     def init_optimizer(self, model, optim_str):
