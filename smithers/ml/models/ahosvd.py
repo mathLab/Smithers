@@ -1,5 +1,5 @@
 '''
-Module focused on the implementation of Averaged Hogher Order SVD
+Module focused on the implementation of Averaged Higher Order SVD
 (AHOSVD) technique.
 '''
 

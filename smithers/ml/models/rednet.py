@@ -5,7 +5,7 @@ by the premodel, the reduction layer and the final input-output map.
 import copy
 import torch
 import torch.nn as nn
-from smithers.ml.tensor_product_layer import tensor_product_layer
+from smithers.ml.models.tensor_product_layer import tensor_product_layer
 
 if torch.cuda.is_available():
     device = torch.device('cuda')
@@ -33,7 +33,7 @@ class RedNet(nn.Module):
                  checkpoint=None):
         super(RedNet, self).__init__()
         if checkpoint is not None:
-            rednet = torch.load(checkpoint, torch.device('cpu'))
+            rednet = torch.load(checkpoint, torch.device(device))
             self.premodel = rednet['model'].premodel
             self.proj_model = rednet['model'].proj_model
             self.inout_map = rednet['model'].inout_map
@@ -41,8 +41,8 @@ class RedNet(nn.Module):
             self.premodel = premodel
             if isinstance(proj_mat, nn.Linear):
                 self.proj_model = proj_mat
-            elif isinstance(proj_mat, tensor_product_layer):
-                self.proj_model = proj_mat
+            elif isinstance(proj_mat, list):
+                self.proj_model = tensor_product_layer(proj_mat)
             else:
                 self.proj_model = nn.Linear(proj_mat.size()[0],
                                             proj_mat.size()[1], bias=False)
@@ -66,20 +66,17 @@ class RedNet(nn.Module):
         :return: output n_images x n_class
         :rtype: torch.tensor
         '''
+        x = x.to(device)
+        x = self.premodel(x)
         if isinstance(self.proj_model, tensor_product_layer):
-            x = x.to(device)
-            x = self.premodel(x)
             x = self.proj_model(x)
             if len(self.proj_model.list_of_matrices) == len(x.shape):
                 x = x.flatten()
             elif len(x.shape) == len(self.proj_model.list_of_matrices) + 1:
-                x = x.reshape(x.shape[0], int(torch.prod(torch.tensor(x.shape[1:]))))
-            x = self.inout_map(x)
-        else:    
-            x = x.to(device)
-            x = self.premodel(x)
+               x = x.reshape(x.shape[0], int(torch.prod(torch.tensor(x.shape[1:]))))
+        else:
             x = x.view(x.size(0), -1)
             x = self.proj_model(x)
-            x = self.inout_map(x)
+        x = self.inout_map(x)
 
         return x

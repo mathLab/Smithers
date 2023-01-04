@@ -77,17 +77,16 @@ def PossibleCutIdx(seq_model):
 def randomized_range_finder(A, size, n_iter=5):
     A = A.to('cpu')
     Q = np.random.normal(size=(A.shape[1], size))
-    
+
     for i in range(n_iter):
         Q, _ = linalg.lu(A @ Q, permute_l=True)
         Q, _ = linalg.lu(A.T @ Q, permute_l=True)
-        
     Q, _ = linalg.qr(A @ Q, mode='economic')
     return Q
 
 def randomized_svd(M, n_components, n_oversamples=10, n_iter=2):
     n_random = n_components + n_oversamples
-    
+
     Q = torch.tensor(randomized_range_finder(M, n_random, n_iter),dtype = torch.float)
     # project M to the (k + p) dimensional space using the basis vectors
     M = torch.tensor(M, dtype = torch.float).to('cpu')
@@ -98,7 +97,7 @@ def randomized_svd(M, n_components, n_oversamples=10, n_iter=2):
     Uhat = torch.tensor(Uhat).to('cpu')
     del B
     U = Q @ Uhat
-    
+
     return U[:, :n_components], s[:n_components], V[:n_components, :]
 
 #  ACTIVE SUBSPACES
@@ -280,7 +279,7 @@ def project_multiple_observations(proj_matrices, observations_tensor):
     for i in range(len(proj_matrices)):
         observations_tensor = torch.tensordot(proj_matrices[i], observations_tensor, ([1],[i+1]))
     return tensor_reverse(observations_tensor)
-    
+
 
 def Total_param(model, storage_per_param=4):
     '''

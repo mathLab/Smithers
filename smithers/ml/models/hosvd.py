@@ -1,3 +1,8 @@
+'''
+Module focused on the implementation of Higher Order SVD
+(HOSVD) technique.
+'''
+
 import torch
 import numpy as np
 

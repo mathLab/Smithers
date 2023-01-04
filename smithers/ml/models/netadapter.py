@@ -7,9 +7,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from smithers.ml.rednet import RedNet
+from smithers.ml.models.rednet import RedNet
 from smithers.ml.models.fnn import FNN, training_fnn
-from smithers.ml.tensor_product_layer import tensor_product_layer
 from smithers.ml.models.utils_rednet import PossibleCutIdx, spatial_gradients, forward_dataset, projection, tensor_projection
 from smithers.ml.models.utils_rednet import randomized_svd
 from smithers.ml.models.ahosvd import AHOSVD
@@ -249,24 +248,21 @@ class NetAdapter():
 
         return [PCE_model, PCE_coeff]
 
-    def _inout_mapping(self, matrix_red, n_class, out_model, train_labels,
+    def _inout_mapping(self, matrix_red, n_class, model, train_labels,
                        train_loader):
         '''
         Function responsible for the creation of the input-output map.
         :param tensor matrix_red: matrix containing the reduced output
             of the pre-model.
+        :param int n _class: number of classes that composes the dataset
         :param tensor train_labels: tensor representing the labels associated
             to each image in the train dataset
-        :param int n _class: number of classes that composes the dataset
-        :param nn.Sequential pre_model: sequential model representing
-            the pre-model.
-        :param nn.Sequential post_model: sequential model representing
-            the pre-model.
+        :param nn.Sequential model: sequential model representing
+        :param tensor train_labels: tensor representing the labels associated
+            to each image in the train dataset.
         :param iterable train_loader: iterable object, it load the dataset for
             training. It iterates over the given dataset, obtained combining a
             dataset (images and labels) and a sampler.
-        :param tensor train_labels: tensor representing the labels associated
-            to each image in the train dataset.
         :return: trained model of FNN or list with the trained model of PCE and
             the corresponding PCE coefficients
         :rtype: nn.Module/list
@@ -277,6 +273,7 @@ class NetAdapter():
 
         elif self.inout_method == 'PCE':
             #code for PCE
+            out_model = forward_dataset(model, train_loader)
             inout_map = self._inout_mapping_PCE(matrix_red, out_model, train_loader, train_labels)
         
         elif self.inout_method == None: 
@@ -316,14 +313,6 @@ class NetAdapter():
         pre_model = input_network[:cut_idxlayer].to(device, dtype=input_type)
         post_model = input_network[cut_idxlayer:].to(device, dtype=input_type)
         snapshots_red, proj_mat = self._reduce(pre_model, post_model, train_dataset, train_loader, device)
-        if self.inout_method == 'PCE':
-            out_model = forward_dataset(input_network, train_loader)
-            inout_map = self._inout_mapping(snapshots_red, n_class, out_model, train_labels, train_loader)
-        else:
-            inout_map = self._inout_mapping(snapshots_red, n_class, None, train_labels, train_loader)
-        if self.red_method == 'HOSVD':
-            proj_matrices_layer = tensor_product_layer(proj_mat)
-            reduced_net = RedNet(n_class, pre_model, proj_matrices_layer, inout_map)
-        else:
-            reduced_net = RedNet(n_class, pre_model, proj_mat, inout_map)
+        inout_map = self._inout_mapping(snapshots_red, n_class, input_network, train_labels, train_loader)
+        reduced_net = RedNet(n_class, pre_model, proj_mat, inout_map)
         return reduced_net.to(device)
