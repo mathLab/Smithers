@@ -11,9 +11,10 @@ import numpy as np
 from torchvision import transforms
 from tqdm import tqdm
 from PIL import ImageDraw, ImageFont
+import copy
 
 from smithers.ml.models.multibox_loss import MultiBoxLoss
-from smithers.ml.models.utils_objdet import AverageMeter, clip_gradient, adjust_learning_rate, detect_objects, calculate_mAP, save_checkpoint_objdet, save_checkpoint_objdet_name
+from smithers.ml.models.utils_objdet import AverageMeter, clip_gradient, adjust_learning_rate, detect_objects, calculate_mAP, save_checkpoint_objdet
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -54,9 +55,8 @@ class Detector(nn.Module):
         :param iterable test_loader: iterable object, it loads the dataset for
             testing. It iterates over the given dataset, obtained combining a
             dataset(images, boxes and labels) and a sampler.
-        :param bool reduced_network: if True it loads the forward function
-            relative to the reduced detector, otherwise it loads the forward
-            function of the full detector.
+        :param str optim_str: string idetifying the optimzer to use, as 'Adam'
+            or 'SGD'.
         '''
         super(Detector, self).__init__()
 
@@ -71,12 +71,12 @@ class Detector(nn.Module):
         self.weight_decay = weight_decay
         self.grad_clip = grad_clip
         self.criterion = MultiBoxLoss(self.priors).to(device)
-        #self.optimizer = self.init_optimizer()
         #Stocastic gradient descent
         self.train_loader = train_loader
         self.test_loader = test_loader
+        self.optim_str = optim_str
         self.start_epoch, self.model, self.optimizer = self.load_network(
-            network, checkpoint, optim_str)
+            network, checkpoint)
         # Since lower level features (conv4_3_feats) have considerably larger
         # scales, we take the L2 norm and rescale. Rescale factor is initially
         # set at 20, but is learned for each channel during back-prop
@@ -84,9 +84,8 @@ class Detector(nn.Module):
             1, 512, 1, 1)).to(device)  # there are 512 channels in conv4_3_feats
         nn.init.constant_(self.rescale_factors, 20)
         self.epochs = self.start_epoch + epochs
-        self.classifier = 'ssd'
 
-    def load_network(self, network, checkpoint, optim_str):
+    def load_network(self, network, checkpoint):
         '''
         Initialize model or load checkpoint
         If checkpoint is None, initialize the model and optimizer
@@ -103,7 +102,7 @@ class Detector(nn.Module):
         if checkpoint is None:
             start_epoch = 0
             model = [network[i].to(device) for i in range(len(network))]
-            optimizer = self.init_optimizer(model, optim_str)
+            optimizer = self.init_optimizer(model)
         else:
             checkpoint = torch.load(checkpoint)
             start_epoch = checkpoint['epoch'] + 1
@@ -112,17 +111,14 @@ class Detector(nn.Module):
             model = [net[i].to(device) for i in range(len(net))]
             optimizer = checkpoint['optimizer']
 
-        model = model.to(device)
         return start_epoch, model, optimizer
 
-    def init_optimizer(self, model, optim_str):
+    def init_optimizer(self, model):
         '''
         Initialize the optimizer, with twice the default learning rate for
         biases, as in the original Caffe repo
         :param list model: list of the different parts that compose the network
             For each element you need to construct it using the class related.
-        :param str optim_str: string defining the optimizer to use, e.g. 'SGD',
-            'Adam'.
         :return optimizer: optimizer object chosen
         '''
         biases = list()
@@ -136,7 +132,7 @@ class Detector(nn.Module):
                         biases.append(param)
                     else:
                         not_biases.append(param)
-        if optim_str=='Adam':
+        if self.optim_str=='Adam':
             optimizer = torch.optim.Adam(params=[{
                 'params': biases,
                 'lr': self.lr
@@ -145,7 +141,7 @@ class Detector(nn.Module):
                 }],
                                     lr=self.lr,
                                     weight_decay=self.weight_decay)
-        elif optim_str=='SGD':
+        elif self.optim_str=='SGD':
             optimizer = torch.optim.SGD(params=[{
                 'params': biases,
                 'lr': 2 * self.lr
@@ -163,30 +159,21 @@ class Detector(nn.Module):
 
     def forward(self, images):
         '''
-        Forward propagation of the entire network
-        :param tensor images: dataset of images used
+        Forward propagation of the entire network.
+
+        :param tensor images: batch of images.
         :return: predicted localizations and classes scores (tensors) for
             each image
+        :rtype: torch.Tensor
         '''
         images = images.to(device)   #dtype = torch.Tensor
         # Run VGG base network convolutions (lower level feature map generators)
         conv4_3, conv7 = self.model[0](images)
-
-        # Rescale conv4_3 (N, 512, 38, 38) after L2 norm
-#        norm = conv4_3.pow(2).sum(dim=1, keepdim=True).sqrt()  # (N, 1, 38, 38)
-#        conv4_3 = conv4_3 / norm  # (N, 512, 38, 38)
-#        conv4_3 = conv4_3 * self.rescale_factors  # (N, 512, 38, 38)
-        # (PyTorch autobroadcasts singleton dimensions during arithmetic)
         output_basenet = [conv4_3.to(device), conv7.to(device)]
-
 
         # Run auxiliary convolutions (higher level feature map generators)
         output_auxconv = self.model[1](conv7)
 
-##        dim_kernel = int(np.sqrt(output_auxconv.size(1)))
-##        output_auxconv = output_auxconv.view(output_auxconv.size(0), dim_kernel, dim_kernel)
-##        output_auxconv = torch.unsqueeze(output_auxconv, dim=1)
-###        output_auxconv = [output_auxconv.to(device)]
         # Run prediction convolutions (predict offsets w.r.t prior-boxes and
         # classes in each resulting localization box)
         locs, classes_scores = self.model[2](output_basenet, output_auxconv)
@@ -253,7 +240,7 @@ class Detector(nn.Module):
                 print('Epoch: [{0}][{1}/{2}]\t'
                       'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                       'Data Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                      'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(
+                      'Loss val (average) {loss.val:.4f} ({loss.avg:.4f})\t'.format(
                           epoch,
                           i,
                           len(self.train_loader),
@@ -262,13 +249,22 @@ class Detector(nn.Module):
                           loss=losses))
         del predicted_locs, predicted_scores, images, boxes, labels
         # free some memory since their histories may be stored
-        return loss.item()
+        return losses.avg #loss.item()
 
-    def train_detector(self, label_map = None):
+    def train_detector(self, label_map=None):
         '''
-        Total training of the detector for all the epochs
+        Total training of the detector for all the epochs.
+
+        :param dict label_map: dictionary for the label map, where the keys are
+            the labels of the objects(the classes) and their values the number
+            of the classes to which they belong (0 for the background). Thus the
+            length of this dict will be the number of the classes of the
+            dataset.
+        :return: checkpoint file containing the status of the net at the end of the
+            training (check_objdet) and a list with the value of the loss over time
+            (loss_values).
+        :rtype: str, list
         '''
-        print('Training has started.')
         # Epochs
         loss_values = []
         mAP_values = []
@@ -281,75 +277,19 @@ class Detector(nn.Module):
             # One epoch's training
             loss_val = self.train_epoch(epoch=epoch)
             loss_values.extend([loss_val])
-            mAP_values.extend([10 * self.eval_detector(label_map, 'checkpoint_ssd300.pth.tar')])
-            if epoch%500 == 0:
-                place_holder = save_checkpoint_objdet(epoch, self.model, self.optimizer, with_epochs = 'Yes')
+            if label_map is not None:
+                mAP_val = self.eval_detector(label_map)
+                mAP_values.extend(mAP_val)
 
         # Save checkpoint
-        print('Training is now complete.')
-        checkpoint_new = save_checkpoint_objdet(epoch, self.model, self.optimizer)
-        return checkpoint_new, loss_values
-
-    def train_detector_with_eval(self, label_map):
-        '''
-        Total training of the detector for all the epochs
-        '''
-        print('Training (with evaluation) has started.')
-        # Epochs
-        loss_values = []
-        mAP_values = []
-        for epoch in range(self.start_epoch, self.epochs):
-
-            # Decay learning rate at particular epochs
-            if epoch in self.decay_lr_at:
-                adjust_learning_rate(self.optimizer, self.decay_lr_to)
-
-            # One epoch's training
-            loss_val = self.train_epoch(epoch=epoch)
-            loss_values.extend([loss_val])
-            mAP_values.extend([10 * self.eval_current_detector(label_map)])
-            if epoch%500 == 0:
-                place_holder = save_checkpoint_objdet(epoch, self.model, self.optimizer, with_epochs = 'Yes')
-
-        # Save checkpoint
-        print('Training (with evaluation) is now complete.')
-        filename = 'checkpoint_ssd300.pth.tar'
-        checkpoint_new = save_checkpoint_objdet(epoch, self.model, self.optimizer)#, filename)
-        return checkpoint_new, loss_values, mAP_values
+        check_objdet = 'checkpoint_objdet.pth.tar'
+        torch.save(copy.deepcopy(self.model), check_objdet)
+        # If a more complete checkpoint is needed uncomment the following line.
+        #check_objdet = save_checkpoint_objdet(self.epochs, self.model, self.optimizer, check_objdet)
+        return check_objdet, loss_values
 
 
-    def train_detector_with_eval_name(self, label_map, mode_list_batch = [], cutoff_idx = ''):
-        '''
-        Total training of the detector for all the epochs
-        '''
-        print('Training (with evaluation) has started.')
-        # Epochs
-        loss_values = []
-        mAP_values = []
-        for epoch in range(self.start_epoch, self.epochs):
-
-            # Decay learning rate at particular epochs
-            #if epoch in self.decay_lr_at:
-            #    adjust_learning_rate(self.optimizer, self.decay_lr_to)
-
-            # One epoch's training
-            loss_val = self.train_epoch(epoch=epoch)
-            loss_values.extend([loss_val])
-            mAP_values.extend([10 * self.eval_current_detector(label_map)])
-            if epoch%500 == 0 and len(mode_list_batch) >0:
-                filename = f'./Results/{self.epochs}_{mode_list_batch[0]}_{mode_list_batch[1]}_{mode_list_batch[2]}_{mode_list_batch[3]}_cut{str(cutoff_idx)}/checkpoint_ssd300_epoch_{epoch}.pth.tar'
-                placeholder = save_checkpoint_objdet_name(epoch, self.model, self.optimizer, filename)
-            elif epoch%500 == 0 and len(mode_list_batch) == 0:
-                filename = f'checkpoint_ssd300_epoch_{epoch}.pth.tar'
-                placeholder = save_checkpoint_objdet_name(epoch, self.model, self.optimizer, filename)
-        # Save checkpoint
-        print('Training (with evaluation) is now complete.')
-        #filename = 'checkpoint_ssd300.pth.tar'
-        filename = f'./Results/{self.epochs}_{mode_list_batch[0]}_{mode_list_batch[1]}_{mode_list_batch[2]}_{mode_list_batch[3]}_cut{str(cutoff_idx)}/checkpoint_ssd300.pth.tar'
-        checkpoint_new = save_checkpoint_objdet_name(epoch, self.model, self.optimizer, filename)
-        return checkpoint_new, loss_values, mAP_values
-
-    def eval_detector(self, label_map, checkpoint):
+    def eval_detector(self, label_map):
         '''
 	Evaluation/Testing Phase
 
@@ -358,20 +298,13 @@ class Detector(nn.Module):
             of the classes to which they belong (0 for the background). Thus the
             length of this dict will be the number of the classes of the
             dataset.
-        :param str checkpoint: path to the checkpoint of the model obtained
-            after the training phase
         '''
-        # Load model checkpoint that is to be evaluated
-        checkpoint = torch.load(checkpoint)
-        model = checkpoint['model']
-#        model = [model[i].to(device) for i in range(len(model))]
-#        model = checkpoint.model
         # set the network(all classes derived from nn.module) in evaluation mode
-        for i in range(len(model) - 1):
-            model[i].eval()
+        for i in range(len(self.model) - 1):
+            self.model[i].eval()
             #model[i].features.eval()
-        model[-1].features_loc.eval()
-        model[-1].features_cl.eval()
+        self.model[-1].features_loc.eval()
+        self.model[-1].features_cl.eval()
         # Lists to store detected and true boxes, labels, scores
         det_boxes = list()
         det_labels = list()
@@ -379,8 +312,6 @@ class Detector(nn.Module):
         true_boxes = list()
         true_labels = list()
         true_difficulties = list()
-        # it is necessary to know which objects are 'difficult', see
-        # 'calculate_mAP' in utils.py
 
         # Good formatting when printing the APs for each class and mAP
         pp = PrettyPrinter()
@@ -434,95 +365,9 @@ class Detector(nn.Module):
         print('\nMean Average Precision (mAP): %.3f' % mAP)
         return mAP
 
-    def eval_current_detector(self, label_map):
-        '''
-	Evaluation/Testing Phase
-
-        :param dict label_map: dictionary for the label map, where the keys are
-            the labels of the objects(the classes) and their values the number
-            of the classes to which they belong (0 for the background). Thus the
-            length of this dict will be the number of the classes of the
-            dataset.
-        :param str checkpoint: path to the checkpoint of the model obtained
-            after the training phase
-        '''
-        # Load model checkpoint that is to be evaluated
-        model = self.model
-#        model = [model[i].to(device) for i in range(len(model))]
-#        model = checkpoint.model
-        # set the network(all classes derived from nn.module) in evaluation mode
-        for i in range(len(model) - 1):
-            model[i].eval()
-            #model[i].features.eval()
-        model[-1].features_loc.eval()
-        model[-1].features_cl.eval()
-        # Lists to store detected and true boxes, labels, scores
-        det_boxes = list()
-        det_labels = list()
-        det_scores = list()
-        true_boxes = list()
-        true_labels = list()
-        true_difficulties = list()
-        # it is necessary to know which objects are 'difficult', see
-        # 'calculate_mAP' in utils.py
-
-        # Good formatting when printing the APs for each class and mAP
-        pp = PrettyPrinter()
-
-        #torch.no_grad() impacts the autograd engine and deactivate it.
-        #It will reduce memory usage and speed up computations but you
-        #would not be able to backprop (which you do not want in an eval
-        #script).
-        with torch.no_grad():
-            # Batches
-            for i, (images, boxes, labels, difficulties) in enumerate(self.test_loader):
-                images = images.to(device)  # (N, 3, 300, 300)
-
-                # Forward prop.
-                predicted_locs, predicted_scores = self.forward(images)
-
-                # Detect objects in SSD output
-#                print('priors:', self.priors.size())
-#                print('predicted_locs', predicted_locs.size())
-#                print('predicted_scores', predicted_scores.size())
-                det_boxes_batch, det_labels_batch, det_scores_batch = detect_objects(
-                    self.priors,
-                    predicted_locs,
-                    predicted_scores,
-                    self.n_classes,
-                    min_score=0.01,
-                    max_overlap=0.45,
-                    top_k=20)
-                # Evaluation MUST be at min_score=0.01, max_overlap=0.45,
-                # top_k=200 for fair comparision with the paper's results
-                # and other repos
-
-                # Store this batch's results for mAP calculation
-                boxes = [b.to(device) for b in boxes]
-                labels = [l.to(device) for l in labels]
-                difficulties = [d.to(device) for d in difficulties]
-
-                det_boxes.extend(det_boxes_batch)
-                det_labels.extend(det_labels_batch)
-                det_scores.extend(det_scores_batch)
-                true_boxes.extend(boxes)
-                true_labels.extend(labels)
-                true_difficulties.extend(difficulties)
-
-            # Calculate mAP
-            APs, mAP = calculate_mAP(det_boxes, det_labels, det_scores,
-                                     true_boxes, true_labels, true_difficulties,
-                                     label_map)
-        #print(APs)
-        # Print AP for each class
-        #pp.pprint(APs)
-
-        print('\nMean Average Precision (mAP): %.3f' % mAP)
-        return mAP 
 
     def detect(self,
                original_image,
-               checkpoint,
                label_map,
                min_score,
                max_overlap,
@@ -533,8 +378,6 @@ class Detector(nn.Module):
         the results.
 
         :param PIL Imagw original_image: image, a PIL Image
-        :param str checkpoint: path to the checkpoint of the model obtained
-            after the training phase
         :param dict label_map: dictionary for the label map, where the keys are
             the labels of the objects(the classes) and their values the number
             of the classes to which they belong (0 for the background). Thus the
@@ -553,16 +396,12 @@ class Detector(nn.Module):
         :return: annotated image, a PIL Image
         """
 
-        # Load model checkpoint that is to be evaluated
-        checkpoint = torch.load(checkpoint)
-        model = checkpoint['model']
-        model = [model[i].to(device) for i in range(len(model))]
         # set the network(all classes derived from nn.module) in evaluation mode
-        for i in range(len(model) - 1):
-            model[i].eval()
+        for i in range(len(self.model) - 1):
+            self.model[i].eval()
 #            model[i].features.eval()
-        model[-1].features_loc.eval()
-        model[-1].features_cl.eval()
+        self.model[-1].features_loc.eval()
+        self.model[-1].features_cl.eval()
 
         # Color map for bounding boxes of detected objects from
         # https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
