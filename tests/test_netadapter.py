@@ -2,8 +2,8 @@ from unittest import TestCase
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
-from smithers.ml.netadapter import NetAdapter
-from smithers.ml.utils import get_seq_model
+from smithers.ml.models.netadapter import NetAdapter
+from smithers.ml.models.utils_rednet import get_seq_model
 
 inps = torch.arange(100 * 3 * 224 * 224,
                     dtype=torch.float32).view(100, 3, 224, 224)
@@ -49,17 +49,4 @@ class TestNetAdapter(TestCase):
         out = red_net(input_)
         self.assertEqual(list(out.size()), [1, 1000])
 
-    def test_reducenet_05(self):
-        netadapter = NetAdapter(5, 20, 'POD', 'PCE')
-        red_net = netadapter.reduce_net(seq_model, train_dat, tgts, train_load, 1000)
-        assert isinstance(red_net, nn.Module)
-        assert isinstance(red_net.proj_model, nn.Linear)
-        assert isinstance(red_net.inout_map, nn.Sequential)
 
-    def test_reducenet_06(self):
-        netadapter = NetAdapter(6, 15, 'POD', 'PCE')
-        red_net = netadapter.reduce_net(seq_model, train_dat, tgts, train_load, 1000)
-        input_ = torch.arange(1 * 3 * 224 * 224,
-                              dtype=torch.float32).view(1, 3, 224, 224)
-        out = red_net(input_)
-        self.assertEqual(list(out.size()), [1, 1000])

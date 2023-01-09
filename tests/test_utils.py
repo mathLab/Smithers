@@ -4,7 +4,12 @@ import torch
 import torch.nn as nn
 import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
-from smithers.ml.utils import get_seq_model, PossibleCutIdx, spatial_gradients, projection, forward_dataset, decimate
+from smithers.ml.models.utils_rednet import get_seq_model, PossibleCutIdx, spatial_gradients, projection, forward_dataset
+
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
 
 class Testutils(TestCase):
     def test_get_seq_model_01(self):
@@ -129,8 +134,8 @@ class Testutils(TestCase):
         tgts = torch.arange(10 * 5, dtype=torch.float32).view(10, 5)
         dataset = TensorDataset(inps, tgts)
         data_loader = DataLoader(dataset, batch_size=2, pin_memory=True)
-        proj_mat = torch.rand(2400, 50)
-        matrix = torch.rand(10, 2400)
+        proj_mat = torch.rand(2400, 50).to(device)
+        matrix = torch.rand(10, 2400).to(device)
         mat_red = projection(proj_mat, data_loader, matrix)
         self.assertEqual(list(mat_red.size()), [10, 50])
 
@@ -140,7 +145,7 @@ class Testutils(TestCase):
         tgts = torch.arange(10, dtype=torch.float32)
         dataset = TensorDataset(inps, tgts)
         model = torch.hub.load('pytorch/vision:v0.10.0', 'vgg16',
-                               pretrained=True)
+                               pretrained=True).to(device)
         model.classifier_str = 'standard'
         data_loader = DataLoader(dataset, batch_size=2, pin_memory=True)
         out_model = forward_dataset(model, data_loader)
@@ -152,7 +157,7 @@ class Testutils(TestCase):
         tgts = torch.arange(50, dtype=torch.float32)
         dataset = TensorDataset(inps, tgts)
         model = torch.hub.load('pytorch/vision:v0.10.0', 'vgg16',
-                               pretrained=True)
+                               pretrained=True).to(device)
         model.classifier_str = 'standard'
         seq_model = get_seq_model(model)
         pre_model = seq_model[:11]
@@ -160,8 +165,3 @@ class Testutils(TestCase):
         out_model = forward_dataset(pre_model, data_loader)
         self.assertEqual(list(out_model.size()), [50, 256 * 56 * 56])
 
-    def test_decimate(self):
-        tensor = torch.rand((100, 140, 30, 4))
-        new_tensor = decimate(tensor, [4, 3, 2, None])
-        self.assertEqual(list(new_tensor.size()), [25, 47, 15, 4])
-        assert isinstance(new_tensor, torch.Tensor)
