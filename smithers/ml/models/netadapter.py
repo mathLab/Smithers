@@ -124,7 +124,7 @@ class NetAdapter():
             batch of images).
         :rtype: list
         '''
-        batch_hosvd = 4
+        batch_hosvd = 1
         batch_old = 0
         ahosvd = AHOSVD(torch.zeros(0), self.red_dim_list, batch_hosvd)
         for idx_, batch in enumerate(data_loader):

@@ -26,7 +26,7 @@ class Detector(nn.Module):
     '''
     def __init__(self, network, checkpoint, priors_cxcy, n_classes, epochs,
                  batch_size, print_freq, lr, decay_lr_at, decay_lr_to, momentum,
-                 weight_decay, grad_clip, train_loader, test_loader, optim_str = 'Adam'):
+                 weight_decay, grad_clip, train_loader, test_loader, optim_str):
         '''
     	:param list network: list of the different parts that compose the network
             For each element you need to construct it using the class related.
@@ -105,12 +105,16 @@ class Detector(nn.Module):
             optimizer = self.init_optimizer(model)
         else:
             checkpoint = torch.load(checkpoint)
-            start_epoch = checkpoint['epoch'] + 1
-            print('\nLoaded checkpoint from epoch %d.\n' % start_epoch)
-            net = checkpoint['model']
-            model = [net[i].to(device) for i in range(len(net))]
-            optimizer = checkpoint['optimizer']
-
+            if isinstance(checkpoint, dict):
+                start_epoch = checkpoint['epoch'] + 1
+                print('\nLoaded checkpoint from epoch %d.\n' % start_epoch)
+                net = checkpoint['model']
+                model = [net[i].to(device) for i in range(len(net))]
+                optimizer = checkpoint['optimizer']
+            else:
+                model = [checkpoint[i].to(device) for i in range(len(checkpoint))]
+                start_epoch = 0
+                optimizer = self.init_optimizer(model)
         return start_epoch, model, optimizer
 
     def init_optimizer(self, model):
@@ -279,13 +283,14 @@ class Detector(nn.Module):
             loss_values.extend([loss_val])
             if label_map is not None:
                 mAP_val = self.eval_detector(label_map)
-                mAP_values.extend(mAP_val)
+                mAP_values.extend([mAP_val])
 
         # Save checkpoint
-        check_objdet = 'checkpoint_objdet.pth.tar'
+        check_objdet = 'checkpoint_objdet.pth'
         torch.save(copy.deepcopy(self.model), check_objdet)
         # If a more complete checkpoint is needed uncomment the following line.
-        #check_objdet = save_checkpoint_objdet(self.epochs, self.model, self.optimizer, check_objdet)
+        check_objdet_full = 'checkpoint_objdet_full.pth.tar'
+        check_objdet_full = save_checkpoint_objdet(self.epochs, self.model, self.optimizer, check_objdet_full)
         return check_objdet, loss_values
 
 
@@ -518,12 +523,46 @@ class Reduced_Detector(Detector):
     Class that handles the creation of the Reduced Object Detector and its training and
     testing phases. This class extends the Detector class.
     '''
-    '''def __init__(self, network, checkpoint, priors_cxcy, n_classes, epochs,
+
+    def __init__(self, network, checkpoint, priors_cxcy, n_classes, epochs,
                  batch_size, print_freq, lr, decay_lr_at, decay_lr_to, momentum,
-                 weight_decay, grad_clip, train_loader, test_loader):
-        super(Reduced_Detector, self).__init__(self, network, checkpoint, priors_cxcy, n_classes, epochs,
+                 weight_decay, grad_clip, train_loader, test_loader, optim_str, red_method):
+        '''
+        :param list network: list of the different parts that compose the network
+            For each element you need to construct it using the class related.
+        :param path_file checkpoint: If None, you will need to initialize the
+            model and optimizer from zero, otherwise you will load them from
+            the checkpoint file given in input.
+        :param tensor priors_cxcy: priors (default bounding boxes) in
+            center-size coordinates, a tensor of size (n_boxes, 4)
+        :param scalar n_classes: number of different type of objects in your
+            dataset
+        :param scalar epochs: number of epochs to run without early-stopping
+        :param scalar batch_size: batch size
+        :param int print_freq:  print training status every __ batches
+        :param scalar lr: learning rate
+        :param list decay_lr_at: decay learning rate after these many iterations
+        :param float decay_lr_to: decay learnign rate to this fraction of the
+            existing learning rate
+        :param scalar momentum: momentum rate
+        :param scalar weight_decay: weight decay
+        :param bool grad_clip: clip if gradients are exploding, which may happen
+            at larger batch sizes (sometimes at 32) - you will recognize it by a
+            sorting error in the MultiBox loss calculation
+        :param iterable train_loader: iterable object, it loads the dataset for
+            training. It iterates over the given dataset, obtained combining a
+            dataset(images, boxes and labels) and a sampler.
+        :param iterable test_loader: iterable object, it loads the dataset for
+            testing. It iterates over the given dataset, obtained combining a
+            dataset(images, boxes and labels) and a sampler.
+        :param str optim_str: string idetifying the optimzer to use, as 'Adam'
+            or 'SGD'.
+        :param str red_method: reduction method to used, e.g. 'POD', 'HOSVD'. 
+        '''
+        super().__init__(network, checkpoint, priors_cxcy, n_classes, epochs,
                  batch_size, print_freq, lr, decay_lr_at, decay_lr_to, momentum,
-                 weight_decay, grad_clip, train_loader, test_loader)'''
+                 weight_decay, grad_clip, train_loader, test_loader, optim_str)
+        self.red_method = red_method
 
     def forward(self, images):
         '''
@@ -538,12 +577,16 @@ class Reduced_Detector(Detector):
         output_basenet = [out_vgg]
 
         # Run auxiliary convolutions (higher level feature map generators)
-        output_auxconv = self.model[1](out_vgg) #hosvd
-#        output_auxconv = self.model[1](out_vgg.view(out_vgg.size(0), -1)) #pod
-#        output_auxconv = torch.unsqueeze(torch.unsqueeze(output_auxconv, dim=-1), dim=-1) #pod
+        if self.red_method=='HOSVD':
+            output_auxconv = self.model[1](out_vgg)
+        elif self.red_method=='POD':
+            output_auxconv = self.model[1](out_vgg.view(out_vgg.size(0), -1))
+            output_auxconv = torch.unsqueeze(torch.unsqueeze(output_auxconv, dim=-1), dim=-1)
+        else:
+            raise ValueError('Wrong choice of the reduction method used.')
 
         # Run prediction convolutions (predict offsets w.r.t prior-boxes and
         # classes in each resulting localization box)
-        locs, classes_scores = self.model[2](output_basenet, output_auxconv)
+        locs, classes_scores = self.model[2](output_basenet, [output_auxconv])
 
         return locs.to(device), classes_scores.to(device)
