@@ -23,7 +23,7 @@ REQUIRED = [
 EXTRAS = {
     'docs': ['Sphinx', 'sphinx_rtd_theme'],
     'vtk': ['vtk'],
-    'ml': ['torch'],
+    'ml': ['torch', 'torchvision'],
     'test': ['pytest', 'pytest-cov'],
 }
 
