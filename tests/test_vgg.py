@@ -1,6 +1,5 @@
 from unittest import TestCase
 import torch.nn as nn
-import PIL
 import torchvision.transforms.functional as FT
 
 from smithers.ml.models.vgg import VGG
@@ -15,23 +14,6 @@ vgg19_cfg = [
 ]
 
 n_classes = 1000
-img_name = 'smithers/ml/dog1.jpg'
-img = PIL.Image.open(img_name)
-
-mean = [0.485, 0.456, 0.406]
-std = [0.229, 0.224, 0.225]
-
-# Resize image
-dims = (300, 300)
-new_image = FT.resize(img, dims)
-
-# Convert PIL image to Torch tensor
-new_image = FT.to_tensor(new_image)
-print(new_image.shape)
-# Normalize by mean and standard deviation of ImageNet data
-# that our base VGG was trained on
-new_image = FT.normalize(new_image, mean=mean, std=std)
-new_image = new_image.reshape(1, 3, 300, 300)
 
 
 class Testvgg(TestCase):

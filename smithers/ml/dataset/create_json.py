@@ -21,12 +21,12 @@ output_folder = args.output_folder
 # NOTE: The labels have to be written using lower case, since in the function
 # parse_annotation the label is transformed in the lower_case mode in order to
 # avoid problems if in the labeling phase a label was written in a wrong way.
-"""labels_list = ('aeroplane', 'bicycle', 'bird', 'boat',
+labels_list = ('aeroplane', 'bicycle', 'bird', 'boat',
         'bottle', 'bus', 'car', 'cat', 'chair',
         'cow', 'diningtable', 'dog', 'horse',
         'motorbike', 'person', 'pottedplant',
-        'sheep', 'sofa', 'train', 'tvmonitor')"""
-labels_list = ('cat', 'dog')
+        'sheep', 'sofa', 'train', 'tvmonitor')
+#labels_list = ('cat', 'dog')
 label_map = {k: v + 1 for v, k in enumerate(labels_list)}
 label_map['background'] = 0
 rev_label_map = {v: k for k, v in label_map.items()}  # Inverse mapping
