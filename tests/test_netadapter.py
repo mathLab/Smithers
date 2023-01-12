@@ -4,14 +4,14 @@ import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 from smithers.ml.models.netadapter import NetAdapter
 from smithers.ml.models.utils_rednet import get_seq_model
+from smithers.ml.models.vgg import VGG
 
 inps = torch.arange(100 * 3 * 224 * 224,
                     dtype=torch.float32).view(100, 3, 224, 224)
 tgts = torch.arange(100, dtype=torch.float32)
 train_dat = TensorDataset(inps, tgts)
 train_load = DataLoader(train_dat, batch_size=2, pin_memory=True)
-model = torch.hub.load('pytorch/vision:v0.10.0', 'vgg16', pretrained=True)
-model.classifier_str = 'standard'
+model = VGG(classifier='standard', init_weights='imagenet')
 seq_model = get_seq_model(model)
 
 
