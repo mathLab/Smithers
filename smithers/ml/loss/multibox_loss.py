@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from smithers.ml.models.utils_objdet import cxcy_to_xy, find_jaccard_overlap, cxcy_to_gcxgcy, xy_to_cxcy
+from smithers.ml.utils_objdet import cxcy_to_xy, find_jaccard_overlap, cxcy_to_gcxgcy, xy_to_cxcy
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torchvision
 
-from smithers.ml.models.utils_imagerec import decimate
+from smithers.ml.utils_imagerec import decimate
 
 if torch.cuda.is_available():
     device = torch.device('cuda')

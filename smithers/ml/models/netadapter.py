@@ -9,10 +9,9 @@ import numpy as np
 
 from smithers.ml.models.rednet import RedNet
 from smithers.ml.models.fnn import FNN, training_fnn
-from smithers.ml.models.utils_rednet import PossibleCutIdx, spatial_gradients, forward_dataset, projection, tensor_projection
-from smithers.ml.models.utils_rednet import randomized_svd
-from smithers.ml.models.ahosvd import AHOSVD
-from smithers.ml.models.pcemodel import PCEModel
+from smithers.ml.utils_rednet import PossibleCutIdx, spatial_gradients, forward_dataset, projection, tensor_projection, randomized_svd
+from smithers.ml.layers.ahosvd import AHOSVD
+from smithers.ml.layers.pcemodel import PCEModel
 
 #from ATHENA.athena.active import ActiveSubspaces
 

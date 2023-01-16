@@ -6,7 +6,7 @@ Module focused on the implementation of Averaged Higher Order SVD
 import torch
 import numpy as np
 
-from smithers.ml.models.hosvd import HOSVD
+from smithers.ml.layers.hosvd import HOSVD
 
 class AHOSVD():
     """

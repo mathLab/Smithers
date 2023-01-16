@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from torch.nn.parameter import Parameter
 
-from smithers.ml.models.utils_rednet import tensor_reverse
+from smithers.ml.utils_rednet import tensor_reverse
 
 class tensor_product_layer(nn.Module):
     """

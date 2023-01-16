@@ -5,7 +5,7 @@ by the premodel, the reduction layer and the final input-output map.
 import copy
 import torch
 import torch.nn as nn
-from smithers.ml.models.tensor_product_layer import tensor_product_layer
+from smithers.ml.layers.tensor_product_layer import tensor_product_layer
 
 if torch.cuda.is_available():
     device = torch.device('cuda')

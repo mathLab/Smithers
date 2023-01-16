@@ -13,8 +13,8 @@ from tqdm import tqdm
 from PIL import ImageDraw, ImageFont
 import copy
 
-from smithers.ml.models.multibox_loss import MultiBoxLoss
-from smithers.ml.models.utils_objdet import AverageMeter, clip_gradient, adjust_learning_rate, detect_objects, calculate_mAP, save_checkpoint_objdet
+from smithers.ml.loss.multibox_loss import MultiBoxLoss
+from smithers.ml.utils_objdet import AverageMeter, clip_gradient, adjust_learning_rate, detect_objects, calculate_mAP, save_checkpoint_objdet
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

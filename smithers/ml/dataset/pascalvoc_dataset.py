@@ -8,7 +8,7 @@ import json
 import torch
 from torch.utils.data import Dataset
 from PIL import Image
-from smithers.ml.models.utils_objdet import transform
+from smithers.ml.utils_objdet import transform
 
 
 class PascalVOCDataset(Dataset):
