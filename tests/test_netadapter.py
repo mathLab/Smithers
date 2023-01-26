@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 from smithers.ml.models.netadapter import NetAdapter
-from smithers.ml.models.utils_rednet import get_seq_model
+from smithers.ml.utils_rednet import get_seq_model
 from smithers.ml.models.vgg import VGG
 
 inps = torch.arange(100 * 3 * 224 * 224,

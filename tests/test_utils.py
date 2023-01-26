@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
-from smithers.ml.models.utils_rednet import get_seq_model, PossibleCutIdx, spatial_gradients, projection, forward_dataset
+from smithers.ml.utils_rednet import get_seq_model, PossibleCutIdx, spatial_gradients, projection, forward_dataset
 
 if torch.cuda.is_available():
     device = torch.device('cuda')

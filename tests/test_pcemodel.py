@@ -2,7 +2,7 @@ from unittest import TestCase
 import torch
 import torch.nn as nn
 import numpy as np
-from smithers.ml.models.pcemodel import PCEModel
+from smithers.ml.layers.pcemodel import PCEModel
 
 input_ = torch.rand(120, 50)
 mean = torch.mean(input_, 0)
