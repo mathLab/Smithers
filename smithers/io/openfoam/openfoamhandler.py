@@ -33,15 +33,19 @@ class OpenFoamHandler:
         # first_index = 0
         # while first_index + 3 <= points.shape[0]:
         #     print(first_index, points.shape[0])
+        
+        if points.shape[0] == 3:
+            triangle = points[1:3] - points[0]
+            normal = np.cross(triangle[0], triangle[1])
+        else:
+            for idx in range(points.shape[0] - 3):
+                triangle = points[idx+1:idx+3] - points[idx]
 
-        for idx in range(points.shape[0] - 3):
-            triangle = points[idx+1:idx+3] - points[idx]
-
-            n = np.cross(triangle[0], triangle[1])
-            if normal is None:
-                normal = n
-            else:
-                normal += n if np.dot(normal, n) > 0 else -n
+                n = np.cross(triangle[0], triangle[1])
+                if normal is None:
+                    normal = n
+                else:
+                    normal += n if np.dot(normal, n) > 0 else -n
 
         return np.divide(normal, np.linalg.norm(normal))
 
