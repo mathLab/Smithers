@@ -12,7 +12,18 @@ packages to make easier and compact the coding of recurrent workflows.
 **Smithers** requires `numpy`, `scipy` and `matplotlib`, which are the common libraries for scientific computing in the Python community.
 All the other dependencies of **Smithers** are imported *at runtime*. 
 
+### Installing via PIP
 
+Mac and Linux users can install pre-built binary packages using pip. To install the package just type:
+
+```
+> pip install git+https://github.com/mathLab/smithers.git
+```
+
+To uninstall the package:
+```
+> pip uninstall smithers
+```
 
 ### Installing from source
 The official distribution is on GitHub, and you can clone the repository using
