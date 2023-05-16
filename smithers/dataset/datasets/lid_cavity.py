@@ -9,7 +9,7 @@ class LidCavity(AbstractDataset):
 
     parametric = True
     time_dependent = False
-    description = "lid cavity problem for increasing to wall velocities"
+    description = "lid cavity problem for increasing top wall velocities"
     data_directory = os.path.join(os.path.dirname(__file__), 'lid_cavity')
 
     def __init__(self) -> None:
