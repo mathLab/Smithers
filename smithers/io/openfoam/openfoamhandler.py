@@ -186,8 +186,8 @@ class OpenFoamHandler:
         * `'first'`: same of `'all_numeric'`, but return only the folder whose
             name is the smallest number of the set;
         * `'not_first'`: same of `'all_numeric'`, but exclude the first folder;
-        * `'latestTime'`: same of `'all_numeric'`, but return only the folder whose
-            name is the largest number of the set;
+        * `'latestTime'`: same of `'all_numeric'`, but return only the folder 
+            whose name is the largest number of the set;
         * a list of folder names.
         :type fields_time_instants: str or list
         :returns: A list of tuples (first item: subfolder name, second item:
