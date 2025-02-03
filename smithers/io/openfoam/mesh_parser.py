@@ -198,19 +198,18 @@ class FoamMesh(object):
             except ValueError:
                 pass
 
-        string_coords = content[start_idx:start_idx+num_points]
+        if not is_binary:
+            string_coords = content[start_idx:start_idx+num_points]
 
-        data = np.array(list(map(parse_line, string_coords)), dtype=float)
+            data = np.array(list(map(parse_line, string_coords)), dtype=float)
+        else:
+            buf = b''.join(content[start_idx-1:])
+            disp = struct.calcsize('c')
+            vv = np.array(struct.unpack('{}d'.format(num_points*3),
+                                        buf[disp:num_points*3*struct.calcsize('d') + disp]))
+            data = vv.reshape((num_points, 3))
+
         return data
-
-        #TODO binary
-        #     if is_binary:
-        #         buf = b''.join(content[n+1:])
-        #         disp = struct.calcsize('c')
-        #         vv = np.array(struct.unpack('{}d'.format(num*3),
-        #                                     buf[disp:num*3*struct.calcsize('d') + disp]))
-        #         data = vv.reshape((num, 3))
-
 
     @classmethod
     def parse_owner_neighbour_content(cls, content, is_binary, skip=10):
