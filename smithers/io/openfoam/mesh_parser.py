@@ -253,13 +253,23 @@ class FoamMesh(object):
                 if not is_binary:
                     data = [[int(s) for s in re.findall(b"\d+", ln)[1:]] for ln in content[n + 2:n + 2 + num]]
                 else:
+                    char_size = struct.calcsize('c')
+                    int_size = struct.calcsize('i')
+
                     buf = b''.join(content[n+1:])
-                    disp = struct.calcsize('c')
-                    idx = struct.unpack('{}i'.format(num), buf[disp:num*struct.calcsize('i') + disp])
-                    disp = 3*struct.calcsize('c') + 2*struct.calcsize('i')
-                    pp = struct.unpack('{}i'.format(idx[-1]),
-                                       buf[disp+num*struct.calcsize('i'):
-                                           disp+(num+idx[-1])*struct.calcsize('i')])
+                    buf = buf[char_size:] # skip the '(' at the beginning of the line
+
+                    idx = struct.unpack('{}i'.format(num), buf[:num*int_size])
+
+                    buf = buf[num*int_size:] 
+                    # skip the character corresponding to the length of the second part which is 
+                    # already present in idx[-1]
+                    buf = b''.join(buf.splitlines(True)[2:]) 
+                    buf = buf[char_size:] # skip the '(' at the beginning of the line
+
+                    pp = list(struct.unpack('{}i'.format(idx[-1]),
+                                       buf[:idx[-1]*int_size]))
+
                     data = []
                     for i in range(num - 1):
                         data.append(pp[idx[i]:idx[i+1]])
