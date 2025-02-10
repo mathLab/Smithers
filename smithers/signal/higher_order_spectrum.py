@@ -110,7 +110,7 @@ class HigherOrderSpectrum(object):
         reduced_window_size = int(self.window_size * window_fraction)
         ranges = [reduced_window_size] * n
 
-        term = np.zeros(shape=self.n_averages, dtype=np.complex)
+        term = np.zeros(shape=self.n_averages, dtype=complex)
         coherence = np.zeros(shape=ranges)
 
         Y = self.windowed_fft[:self.n_averages]
