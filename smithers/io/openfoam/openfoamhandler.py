@@ -186,6 +186,8 @@ class OpenFoamHandler:
         * `'first'`: same of `'all_numeric'`, but return only the folder whose
             name is the smallest number of the set;
         * `'not_first'`: same of `'all_numeric'`, but exclude the first folder;
+        * `'latestTime'`: same of `'all_numeric'`, but return only the folder 
+            whose name is the largest number of the set;
         * a list of folder names.
         :type fields_time_instants: str or list
         :returns: A list of tuples (first item: subfolder name, second item:
@@ -209,6 +211,7 @@ class OpenFoamHandler:
             fields_time_instants == "all_numeric"
             or fields_time_instants == "first"
             or fields_time_instants == "not_first"
+            or fields_time_instants == "latestTime"
         ):
             subfolders = next(os.walk(path))[1]
             subfolders = list(filter(is_numeric, subfolders))
@@ -220,6 +223,8 @@ class OpenFoamHandler:
                 time_instant_subfolders = subfolders
             elif fields_time_instants == "not_first":
                 time_instant_subfolders = sorted(subfolders)[1:]
+            elif fields_time_instants == "latestTime":
+                time_instant_subfolders = [sorted(subfolders)[-1]]
             else:
                 # we want a list in order to return an iterable object
                 time_instant_subfolders = [sorted(subfolders)[0]]
