@@ -1,0 +1,23 @@
+name: "Monthly Tagger"
+
+on:
+  schedule:
+    - cron: '20 2 1 * *'
+
+jobs:
+
+  monthly_tag:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.NDEMO_PAT_TOKEN }}
+
+      - name: Create and push the tag
+        run: |
+          VERS=$"post$(date +%y%m)"
+          git config --global user.name 'Monthly Tag bot'
+          git config --global user.email 'mtbot@noreply.github.com'
+          git tag -a "v0.0.1$VERS" -m "Monthly version $VERS"
+          git push origin "v0.0.1$VERS"
