@@ -172,7 +172,7 @@ def split_boundary_content(content):
             if lc.rstrip() == b'}':
                 break
             if in_patch_field:
-                if lc.strip() == b'}':
+                if lc.strip(b' \t\n') == b'}' and content[n-1].endswith(b');\n'):
                     bd[current_path][1] = n-1
                     in_patch_field = False
                     current_path = ''
